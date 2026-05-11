@@ -1,273 +1,331 @@
-<style>
-    /* التنسيقات مكملة على نفس الهوية البصرية اللي عملناها في صفحة المدرب */
-    .admin-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #ff9f43; /* لون برتقالي لتمييز لوحة الإدارة */
-    }
-
-    .tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-
-    .tab-btn {
-        background-color: var(--card-bg);
-        color: var(--text-light);
-        border: 1px solid #2c3e50;
-        padding: 10px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: 0.3s;
-        font-weight: bold;
-    }
-
-    .tab-btn.active, .tab-btn:hover {
-        background-color: #ff9f43; /* برتقالي للإدارة */
-        color: #000;
-    }
-
-    .tab-content {
-        display: none;
-        background-color: var(--card-bg);
-        padding: 20px;
-        border-radius: 10px;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    .filter-row {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
-        background-color: var(--main-bg);
-        padding: 15px;
-        border-radius: 8px;
-        flex-wrap: wrap;
-    }
-
-    .filter-group {
-        flex: 1;
-        min-width: 150px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .filter-group select, .filter-group input {
-        padding: 10px;
-        background-color: var(--card-bg);
-        border: 1px solid #2c3e50;
-        color: white;
-        border-radius: 5px;
-    }
-
-    .action-btn-admin {
-        background-color: #ff9f43;
-        color: #000;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: 0.3s;
-    }
-
-    .action-btn-admin:hover {
-        background-color: #ffb142;
-    }
-
-    /* تنسيق الجدول */
-    .table-container {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: center;
-        margin-top: 15px;
-    }
-
-    th, td {
-        border: 1px solid #2c3e50;
-        padding: 12px;
-    }
-
-    th {
-        background-color: var(--main-bg);
-        color: #ff9f43;
-    }
-
-    .reports-box {
-        border: 2px dashed #ff9f43;
-        padding: 30px;
-        text-align: center;
-        border-radius: 10px;
-        margin-top: 20px;
-    }
-
-    .pdf-icon {
-        font-size: 40px;
-        margin-bottom: 15px;
-    }
-</style>
-
-<div class="admin-header">
-    <h2>لوحة الإدارة - المركز العلمي</h2>
-    <button class="action-btn-admin" onclick="logout()" style="background-color: #ff4757; color: white;">تسجيل خروج</button>
-</div>
-
-<div class="tabs">
-    <button class="tab-btn active" onclick="switchAdminTab('monitoring')">المتابعة الشاملة</button>
-    <button class="tab-btn" onclick="switchAdminTab('reports')">استخراج التقارير</button>
-    <button class="tab-btn" onclick="switchAdminTab('admin-dashboard')">إحصائيات المركز</button>
-</div>
-
-<div id="monitoring" class="tab-content active">
-    <h3>فلترة البيانات</h3>
-    <div class="filter-row">
-        <div class="filter-group">
-            <label>القسم</label>
-            <select id="filter-dept" onchange="loadInstructors()">
-                <option value="">كل الأقسام...</option>
-                <option value="CS">البرمجة (CS)</option>
-                <option value="Robotics">الروبوتكس</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>المدرب</label>
-            <select id="filter-instructor" onchange="loadGroups()">
-                <option value="">كل المدربين...</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>المجموعة</label>
-            <select id="filter-group">
-                <option value="">كل المجموعات...</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>الشهر</label>
-            <select id="filter-month">
-                <option value="">كل الشهور...</option>
-                <option value="أبريل">أبريل</option>
-                <option value="مايو">مايو</option>
-            </select>
-        </div>
-        <div class="filter-group" style="justify-content: flex-end;">
-            <button class="action-btn-admin" onclick="fetchFilteredData()">عرض البيانات</button>
-        </div>
-    </div>
-
-    <div class="table-container">
-        <table id="admin-table">
-            <thead>
-                <tr>
-                    <th>اسم الطالب</th>
-                    <th>القسم</th>
-                    <th>المدرب</th>
-                    <th>المجموعة</th>
-                    <th>السيشن</th>
-                    <th>الحضور</th>
-                    <th>التفاعل</th>
-                    <th>التاسك</th>
-                    <th>الامتحان</th>
-                </tr>
-            </thead>
-            <tbody id="admin-tbody">
-                <tr><td colspan="9" style="color: var(--text-muted);">قم باختيار الفلاتر لعرض بيانات الطلاب</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div id="reports" class="tab-content">
-    <h3>إصدار تقارير الطلاب (PDF)</h3>
-    <div class="filter-row">
-        <div class="filter-group">
-            <label>تحديد الشهر المراد تقييمه</label>
-            <select id="report-month">
-                <option value="أبريل">أبريل</option>
-                <option value="مايو">مايو</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>تحديد طالب معين (اختياري)</label>
-            <input type="text" id="report-student" placeholder="أدخل اسم الطالب أو اتركه فارغاً للكل">
-        </div>
-    </div>
-
-    <div class="reports-box">
-        <div class="pdf-icon">📄</div>
-        <h4 style="margin-bottom: 10px;">طباعة تقارير الأداء (A4)</h4>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">
-            سيتم استخراج تقرير مفصل يشمل أداء الـ 8 سيشن بالكامل، مزوداً بشعار المركز وبيانات التواصل الخاصة بفرع بني سويف.
-        </p>
-        <button class="action-btn-admin" onclick="generateReports()" style="font-size: 18px; padding: 15px 30px;">
-            🖨️ بدء استخراج وطباعة التقارير
-        </button>
-        <div id="report-status" style="margin-top: 15px; color: #00d4ff; font-weight: bold; display: none;">
-            جاري معالجة البيانات وتوليد ملفات الـ PDF... يرجى الانتظار
-        </div>
-    </div>
-</div>
-
-<div id="admin-dashboard" class="tab-content">
-    <h3>إحصائيات أداء المركز</h3>
-    <p style="color: var(--text-muted);">هنا سيتم استعراض أداء المدربين، ومقارنة نسب النجاح والغياب عبر الـ 15 شارت المطلوبة.</p>
-</div>
-
-<script>
-    // التبديل بين تابات الإدارة
-    function switchAdminTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        
-        document.getElementById(tabId).classList.add('active');
-        event.target.classList.add('active');
-    }
-
-    // دالة لاستخراج التقارير (ترتبط بالباك إند)
-    function generateReports() {
-        const month = document.getElementById('report-month').value;
-        const studentName = document.getElementById('report-student').value;
-        const statusDiv = document.getElementById('report-status');
-
-        if(!month) {
-            alert("يرجى اختيار الشهر أولاً!");
-            return;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة - المركز العلمي</title>
+    <style>
+        :root {
+            --main-bg: #131b2f;
+            --card-bg: #1e2a47;
+            --primary-color: #ff9f43; /* لون برتقالي مميز للإدارة */
+            --accent-blue: #00d4ff;
+            --text-light: #ffffff;
+            --text-muted: #a0aabf;
         }
 
-        // إظهار رسالة التحميل
-        statusDiv.style.display = 'block';
-        statusDiv.innerText = "جاري تجميع بيانات أداء الـ 8 سيشن وتوليد ملفات الـ PDF... يرجى الانتظار";
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--main-bg);
+            color: var(--text-light);
+        }
 
-        // نداء لدالة في Apps Script (سنقوم ببرمجتها لاحقاً)
-        /*
-        google.script.run.withSuccessHandler(function(responseUrl) {
-            statusDiv.style.color = '#2ecc71';
-            statusDiv.innerHTML = `تم الانتهاء! <a href="${responseUrl}" target="_blank" style="color:#ff9f43;">اضغط هنا لتحميل التقارير</a>`;
-        }).generateStudentPDF(studentName, month);
-        */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+        }
 
-        // محاكاة للانتهاء
-        setTimeout(() => {
-            statusDiv.style.color = '#2ecc71';
-            statusDiv.innerHTML = `تم الانتهاء بنجاح! سيتم تنزيل ملف (تقارير_شهر_${month}.zip)`;
-        }, 3000);
-    }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
 
-    // لتسجيل الخروج والعودة لـ index.html
-    function logout() {
-        sessionStorage.clear();
-        document.getElementById('main-content').style.display = 'none';
-        document.getElementById('login-section').style.display = 'block';
-    }
-</script>
+        .tab-btn {
+            background-color: var(--card-bg);
+            color: var(--text-light);
+            border: 1px solid #2c3e50;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+
+        .tab-content {
+            display: none;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .tab-content.active { display: block; }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            background-color: var(--main-bg);
+            padding: 15px;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 12px;
+            background-color: var(--card-bg);
+            border: 1px solid #2c3e50;
+            color: white;
+            border-radius: 5px;
+        }
+
+        .action-btn {
+            background-color: var(--primary-color);
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; text-align: center; }
+        th, td { border: 1px solid #2c3e50; padding: 12px; }
+        th { background-color: var(--main-bg); color: var(--primary-color); }
+
+        .reports-box {
+            border: 2px dashed var(--primary-color);
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        /* تنسيق منطقة الطباعة - مخفية في العرض العادي */
+        #print-area { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area {
+                position: absolute;
+                left: 0; top: 0; width: 100%;
+                display: block !important;
+                background-color: white !important;
+                color: black !important;
+                padding: 20px;
+                direction: rtl;
+            }
+            .report-header { display: flex; justify-content: space-between; border-bottom: 2px solid #00d4ff; padding-bottom: 10px; }
+            .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .report-table th, .report-table td { border: 1px solid #000; padding: 10px; font-size: 14px; }
+            .report-table th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; }
+        }
+
+        .status-msg { color: var(--accent-blue); font-weight: bold; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-header">
+        <h2>لوحة الإدارة - المركز العلمي</h2>
+        <button onclick="logout()" style="background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">تسجيل خروج</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('monitoring')">المتابعة الشاملة</button>
+        <button class="tab-btn" onclick="switchTab('reports')">استخراج التقارير</button>
+        <button class="tab-btn" onclick="switchTab('analytics')">الداشبورد</button>
+    </div>
+
+    <div id="monitoring" class="tab-content active">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>الشهر</label>
+                <select id="filter-month">
+                    <option value="مايو">مايو</option>
+                    <option value="أبريل">أبريل</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>المدرب</label>
+                <input type="text" id="filter-inst" placeholder="اسم المدرب...">
+            </div>
+            <button class="action-btn" onclick="fetchFullData()" style="align-self: flex-end;">عرض كل البيانات</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الطالب</th>
+                        <th>المدرب</th>
+                        <th>المجموعة</th>
+                        <th>السيشن</th>
+                        <th>الحضور</th>
+                        <th>التفاعل</th>
+                        <th>التاسك</th>
+                        <th>الامتحان</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-tbody">
+                    <tr><td colspan="8">اضغط على عرض البيانات لجلب السجلات</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="reports" class="tab-content">
+        <div class="reports-box">
+            <h3 style="color: var(--primary-color);">إصدار تقرير أداء طالب</h3>
+            <div class="filter-row" style="background: none; justify-content: center;">
+                <div class="filter-group" style="max-width: 250px;">
+                    <label>اسم الطالب الرباعي</label>
+                    <input type="text" id="report-student-name" placeholder="أدخل اسم الطالب بدقة...">
+                </div>
+                <div class="filter-group" style="max-width: 200px;">
+                    <label>اختر الشهر</label>
+                    <select id="report-month-select">
+                        <option value="مايو">مايو</option>
+                        <option value="أبريل">أبريل</option>
+                    </select>
+                </div>
+            </div>
+            <button class="action-btn" onclick="preparePrint()" style="padding: 15px 40px; font-size: 18px;">🖨️ طباعة التقرير (A4)</button>
+            <p id="print-status" class="status-msg"></p>
+        </div>
+    </div>
+
+    <div id="analytics" class="tab-content">
+        <h3>إحصائيات المركز</h3>
+        <p style="color: var(--text-muted);">سيتم هنا ربط 15 مخططاً بيانياً باستخدام مكتبة Chart.js بناءً على بيانات الشيت.</p>
+    </div>
+
+    <div id="print-area">
+        <div class="report-header">
+            <div>
+                <strong style="font-size: 20px;">المركز العلمي</strong><br>
+                <span>بني سويف، 38 شارع بورسعيد</span><br>
+                <span>📞 01010959839 | 01200381204</span>
+            </div>
+            <img src="logo.jpeg" style="width: 90px; height: 90px;" onerror="this.style.display='none'">
+        </div>
+        <h2 style="text-align: center; margin: 30px 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">تقرير متابعة مستوى الطالب</h2>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 16px;">
+            <div><strong>اسم الطالب:</strong> <span id="p-name"></span></div>
+            <div><strong>الشهر:</strong> <span id="p-month"></span></div>
+            <div><strong>المدرب:</strong> <span id="p-inst"></span></div>
+        </div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>السيشن</th>
+                    <th>الحضور</th>
+                    <th>التفاعل (5)</th>
+                    <th>التاسك (5)</th>
+                    <th>الامتحان</th>
+                    <th>ملاحظات المدرب</th>
+                </tr>
+            </thead>
+            <tbody id="p-body"></tbody>
+        </table>
+        <div style="margin-top: 60px; text-align: center; border-top: 2px solid #131b2f; padding-top: 20px;">
+            <p style="font-size: 18px; font-weight: bold; color: #00d4ff;">المركز العلمي _ خبرة سنين</p>
+            <p>مؤسسة تعليمية واستشارية رائدة تهدف إلى بناء عقول مستنيرة قادرة على المنافسة في سوق العمل.</p>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI2r-NhkhxH57Iexw_YcjXueto_dpX-pgqrCCcImStiw7FQEF-zkXZHSo2Wy1uGjDx/exec";
+        
+        window.onload = function() {
+            if(!sessionStorage.getItem('userInfo')) window.location.href = "index.html";
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // جلب البيانات الخام للمتابعة
+        function fetchFullData() {
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getDashboard" }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('admin-tbody');
+                tbody.innerHTML = "";
+                data.data.slice(1).forEach(row => {
+                    tbody.innerHTML += `<tr>
+                        <td>${row[5]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[4]}</td>
+                        <td>${row[6]}</td><td>${row[7]}</td><td>${row[8]}</td><td>${row[10]}</td>
+                    </tr>`;
+                });
+            });
+        }
+
+        // تحضير الطباعة
+        function preparePrint() {
+            const sName = document.getElementById('report-student-name').value.trim();
+            const sMonth = document.getElementById('report-month-select').value;
+            const status = document.getElementById('print-status');
+
+            if(!sName) return alert("يرجى إدخال اسم الطالب");
+
+            status.style.display = "block";
+            status.innerText = "جاري جلب بيانات الطالب للطباعة...";
+
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getReportData", studentName: sName, month: sMonth }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                status.style.display = "none";
+                if(data.success) {
+                    document.getElementById('p-name').innerText = data.studentName;
+                    document.getElementById('p-month').innerText = data.month;
+                    document.getElementById('p-inst').innerText = data.instructorName;
+                    
+                    const pBody = document.getElementById('p-body');
+                    pBody.innerHTML = "";
+                    data.sessions.forEach(s => {
+                        pBody.innerHTML += `<tr>
+                            <td>سيشن ${s.sessionNumber}</td>
+                            <td>${s.attendance}</td>
+                            <td>${s.interaction}</td>
+                            <td>${s.task}</td>
+                            <td>${s.examScore}</td>
+                            <td>${s.notes}</td>
+                        </tr>`;
+                    });
+                    window.print();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
