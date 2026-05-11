@@ -27,14 +27,6 @@
             overflow: hidden;
         }
 
-        #app-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
         .login-card {
             background-color: var(--card-bg);
             padding: 40px;
@@ -52,7 +44,7 @@
             border-radius: 15px;
             margin-bottom: 25px;
             object-fit: contain;
-            background-color: #fff; /* عشان اللوجو يكون واضح لو خلفيته شفافة */
+            background-color: #fff;
             padding: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
@@ -137,52 +129,39 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* حاوية المحتوى الرئيسي (المدرب أو الإدمن) */
-        #main-content {
-            display: none;
-            width: 100%;
-            height: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
     </style>
 </head>
 <body>
 
-    <div id="app-container">
+    <div class="login-card">
+        <img src="logo.jpeg" alt="لوجو المركز العلمي" class="logo" onerror="this.src='https://via.placeholder.com/120x120/ffffff/000000?text=Logo'">
         
-        <div id="login-section" class="login-card">
-            <img src="logo.jpeg" alt="لوجو المركز العلمي" class="logo" onerror="this.src='https://via.placeholder.com/120x120/ffffff/000000?text=Logo'">
-            
-            <h2 class="login-title">تسجيل الدخول</h2>
+        <h2 class="login-title">تسجيل الدخول</h2>
 
-            <div class="input-group">
-                <label>اسم المستخدم</label>
-                <input type="text" id="username" placeholder="أدخل اسم المستخدم">
-            </div>
-
-            <div class="input-group">
-                <label>رمز القسم</label>
-                <input type="text" id="deptCode" placeholder="أدخل رمز القسم">
-            </div>
-
-            <div class="input-group">
-                <label>كلمة المرور</label>
-                <input type="password" id="password" placeholder="أدخل كلمة المرور">
-            </div>
-
-            <button class="login-btn" id="login-btn" onclick="processLogin()">دخول</button>
-            <div class="loader" id="loader"></div>
-            <div class="error-msg" id="error-msg"></div>
+        <div class="input-group">
+            <label>اسم المستخدم</label>
+            <input type="text" id="username" placeholder="أدخل اسم المستخدم">
         </div>
 
-        <div id="main-content"></div>
+        <div class="input-group">
+            <label>رمز القسم</label>
+            <input type="text" id="deptCode" placeholder="أدخل رمز القسم">
+        </div>
 
+        <div class="input-group">
+            <label>كلمة المرور</label>
+            <input type="password" id="password" placeholder="أدخل كلمة المرور">
+        </div>
+
+        <button class="login-btn" id="login-btn" onclick="processLogin()">دخول</button>
+        <div class="loader" id="loader"></div>
+        <div class="error-msg" id="error-msg"></div>
     </div>
 
     <script>
+        // رابط الـ API الخاص بيكي اللي بيشاور على Google Apps Script
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI2r-NhkhxH57Iexw_YcjXueto_dpX-pgqrCCcImStiw7FQEF-zkXZHSo2Wy1uGjDx/exec";
+
         function processLogin() {
             // جلب البيانات من الحقول
             const user = document.getElementById('username').value.trim();
@@ -205,49 +184,59 @@
             btn.style.display = "none";
             loader.style.display = "block";
 
-            // إرسال البيانات لدالة checkLogin في ملف Code.gs
-            google.script.run
-                .withSuccessHandler(function(response) {
-                    loader.style.display = "none";
+            // تجهيز البيانات للإرسال بصيغة JSON
+            const requestBody = {
+                action: "login",
+                username: user,
+                deptCode: dept,
+                password: pass
+            };
+
+            // إرسال الطلب لـ Google Apps Script باستخدام fetch
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                // إرسال كـ text/plain لتفادي مشاكل الـ CORS في المتصفح مع جيت هاب
+                body: JSON.stringify(requestBody),
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loader.style.display = "none";
+                
+                if(data.success) {
+                    // حفظ بيانات المستخدم في الجلسة (Session Storage)
+                    sessionStorage.setItem('userInfo', JSON.stringify(data));
                     
-                    if(response.success) {
-                        // حفظ بيانات المستخدم في الجلسة لاستخدامها في الداشبورد
-                        sessionStorage.setItem('userInfo', JSON.stringify(response));
-                        
-                        // إخفاء كارت اللوجين
-                        document.getElementById('login-section').style.display = 'none';
-                        document.getElementById('main-content').style.display = 'block';
-                        
-                        // تحميل واجهة المستخدم بناءً على الرتبة (Admin أو Instructor)
-                        loadUserInterface(response.role);
+                    // التوجيه للصفحة المناسبة بناءً على الرتبة
+                    if(data.role === 'Admin') {
+                        window.location.href = "admin.html";
                     } else {
-                        // إرجاع الزر وعرض رسالة الخطأ
-                        btn.style.display = "block";
-                        errorMsg.innerText = response.message || "بيانات الدخول غير صحيحة";
-                        errorMsg.style.display = "block";
+                        window.location.href = "instructor.html";
                     }
-                })
-                .withFailureHandler(function(error) {
-                    loader.style.display = "none";
+                } else {
+                    // إرجاع الزر وعرض رسالة الخطأ من السيرفر
                     btn.style.display = "block";
-                    errorMsg.innerText = "حدث خطأ في الاتصال بالسيرفر، حاول مرة أخرى.";
+                    errorMsg.innerText = data.message;
                     errorMsg.style.display = "block";
-                })
-                .checkLogin(user, pass, dept);
+                }
+            })
+            .catch(error => {
+                loader.style.display = "none";
+                btn.style.display = "block";
+                errorMsg.innerText = "حدث خطأ في الاتصال بالسيرفر، يرجى المحاولة لاحقاً.";
+                errorMsg.style.display = "block";
+                console.error("Login Error:", error);
+            });
         }
 
-        function loadUserInterface(role) {
-            const mainContent = document.getElementById('main-content');
-            
-            // مؤقتاً نعرض رسالة حتى نقوم ببرمجة ملفات instructor و admin
-            if(role === 'Admin') {
-                mainContent.innerHTML = "<h2 style='text-align:center; margin-top: 20%; color: var(--primary-color);'>مرحباً بك في لوحة تحكم الإدارة... جاري التجهيز</h2>";
-                // لاحقاً سنستخدم: google.script.run.withSuccessHandler(html => mainContent.innerHTML = html).getAdminView();
-            } else {
-                mainContent.innerHTML = "<h2 style='text-align:center; margin-top: 20%; color: var(--primary-color);'>مرحباً بك في لوحة تحكم المدرب... جاري التجهيز</h2>";
-                // لاحقاً سنستخدم: google.script.run.withSuccessHandler(html => mainContent.innerHTML = html).getInstructorView();
+        // إضافة ميزة تسجيل الدخول عند الضغط على زر Enter
+        document.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                processLogin();
             }
-        }
+        });
     </script>
 </body>
 </html>
