@@ -50,7 +50,7 @@
         .radio-group { display: flex; gap: 20px; justify-content: center; margin-top: 15px; }
 
         /* قالب الـ PDF المخفي - مصمم ليتناسب تماما مع A4 */
-        #pdf-template, .pdf-page { width: 210mm; min-height: 297mm; max-height: 297mm; overflow: hidden; padding: 15mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
+        #pdf-template, .pdf-page { width: 210mm; height: 297mm; overflow: hidden; padding: 15mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
         #pdf-template { display: none; }
         .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; table-layout: fixed; }
         .report-table th, .report-table td { border: 1px solid #1e2a47; padding: 6px; font-size: 11px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.4; vertical-align: middle; }
@@ -326,14 +326,15 @@
             
             const status = document.getElementById('zip-status');
             const monthSessions = gData.sessions.slice(1).filter(s => s[3] === month);
-            const uniqueStudents = [...new Set(monthSessions.map(s => s[5]))];
+            let uniqueStudents = [...new Set(monthSessions.map(s => s[5]))];
+            // تصفية أي أسماء فارغة قد تكون مسجلة بالخطأ
+            uniqueStudents = uniqueStudents.filter(n => n && String(n).trim() !== '');
             
             if(uniqueStudents.length === 0) return alert("لا توجد بيانات مسجلة في هذا الشهر");
 
-            status.innerText = `جاري توليد ملف PDF مجمع لعدد ${uniqueStudents.length} تقارير... يرجى الانتظار ولا تغلق الصفحة.`;
+            status.innerText = `جاري توليد ملف PDF مجمع لعدد ${uniqueStudents.length} طلاب... يرجى الانتظار ولا تغلق الصفحة.`;
             
-            const bulkContainer = document.createElement('div');
-            bulkContainer.style.display = 'block';
+            const nodes = [];
             
             for(let i=0; i<uniqueStudents.length; i++) {
                 const sName = uniqueStudents[i];
@@ -364,15 +365,9 @@
                 clonedNode.classList.add('pdf-page');
                 clonedNode.style.display = "block";
                 
-                // إضافة فاصل صفحات CSS إذا لم يكن التقرير الأخير
-                if (i < uniqueStudents.length - 1) {
-                    clonedNode.style.pageBreakAfter = "always";
-                }
-                bulkContainer.appendChild(clonedNode);
+                nodes.push(clonedNode);
             }
             
-            document.body.appendChild(bulkContainer);
-
             const opt = { 
                 margin: 0, 
                 filename: `تقرير_مجمع_شهر_${month}.pdf`, 
@@ -381,8 +376,17 @@
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(opt).from(bulkContainer).save().then(() => {
-                document.body.removeChild(bulkContainer);
+            // معالجة كل صفحة على حدة لمنع انهيار الكانفاس (والذي يسبب صفحات بيضاء)
+            let worker = html2pdf().set(opt);
+            for(let i=0; i<nodes.length; i++) {
+                if (i === 0) {
+                    worker = worker.from(nodes[i]).toPdf();
+                } else {
+                    worker = worker.get('pdf').then(pdf => { pdf.addPage(); }).from(nodes[i]).toContainer().toCanvas().toPdf();
+                }
+            }
+            
+            worker.save().then(() => {
                 status.innerText = "تم التحميل بنجاح! 🎉";
             });
         }
