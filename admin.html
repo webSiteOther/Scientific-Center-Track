@@ -50,9 +50,17 @@
         .radio-group { display: flex; gap: 20px; justify-content: center; margin-top: 15px; }
 
         /* قالب الـ PDF المخفي - مصمم ليتناسب تماما مع A4 */
-        #pdf-template { display: none; width: 210mm; min-height: 297mm; padding: 15mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; }
-        .report-table th, .report-table td { border: 1px solid #1e2a47; padding: 6px; font-size: 13px; }
+        #pdf-template, .pdf-page { width: 210mm; min-height: 297mm; max-height: 297mm; overflow: hidden; padding: 15mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
+        #pdf-template { display: none; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; table-layout: fixed; }
+        .report-table th, .report-table td { border: 1px solid #1e2a47; padding: 6px; font-size: 11px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.4; vertical-align: middle; }
+        .report-table th:nth-child(1) { width: 10%; }
+        .report-table th:nth-child(2) { width: 12%; }
+        .report-table th:nth-child(3) { width: 10%; }
+        .report-table th:nth-child(4) { width: 10%; }
+        .report-table th:nth-child(5) { width: 10%; }
+        .report-table th:nth-child(6) { width: 10%; }
+        .report-table th:nth-child(7) { width: 38%; }
         .report-table th { background-color: #f2f2f2; color: #131b2f; }
         .footer-contact p { margin: 5px 0; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 10px; justify-content: flex-start;}
     </style>
@@ -89,8 +97,11 @@
                     <select id="bulk-month"></select>
                 </div>
             </div>
-            <button class="action-btn" onclick="generateBulkZip()" style="font-size: 18px;">📦 توليد وتحميل ملف الـ ZIP</button>
-            <div id="zip-status" style="margin-top: 15px; color: var(--accent-blue); font-weight: bold;"></div>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button class="action-btn" onclick="generateBulkZip()" style="font-size: 18px;">📦 توليد وتحميل ملف الـ ZIP</button>
+                <button class="action-btn" onclick="generateBulkPDF()" style="font-size: 18px; background-color: #2ecc71;">📄 توليد PDF مجمع (طابور)</button>
+            </div>
+            <div id="zip-status" style="margin-top: 15px; color: var(--accent-blue); font-weight: bold; text-align: center;"></div>
         </div>
 
         <div class="reports-section" style="border-color: var(--accent-blue);">
@@ -307,6 +318,73 @@
             const grp = document.getElementById('rep-group').value;
             const stds = gData.students.slice(1).filter(s => s[2] === grp).map(s => s[3]);
             document.getElementById('rep-student').innerHTML = '<option value="">اختر...</option>' + stds.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        async function generateBulkPDF() {
+            const month = document.getElementById('bulk-month').value;
+            if(!month) return alert("يرجى اختيار الشهر");
+            
+            const status = document.getElementById('zip-status');
+            const monthSessions = gData.sessions.slice(1).filter(s => s[3] === month);
+            const uniqueStudents = [...new Set(monthSessions.map(s => s[5]))];
+            
+            if(uniqueStudents.length === 0) return alert("لا توجد بيانات مسجلة في هذا الشهر");
+
+            status.innerText = `جاري توليد ملف PDF مجمع لعدد ${uniqueStudents.length} تقارير... يرجى الانتظار ولا تغلق الصفحة.`;
+            
+            const bulkContainer = document.createElement('div');
+            bulkContainer.style.display = 'block';
+            
+            for(let i=0; i<uniqueStudents.length; i++) {
+                const sName = uniqueStudents[i];
+                const sData = monthSessions.filter(s => s[5] === sName);
+                const inst = sData[0][1]; const grp = sData[0][2];
+                const grpInfo = gData.groups.find(g => g[2] === grp);
+                const gTime = grpInfo ? grpInfo[4] : "غير محدد";
+                const uInfo = gData.users.find(u => u[0] === inst);
+                const dept = uInfo ? uInfo[1] : "المركز العلمي";
+
+                document.getElementById('tpl-student').innerText = sName;
+                document.getElementById('tpl-dept').innerText = dept;
+                document.getElementById('tpl-inst').innerText = inst;
+                document.getElementById('tpl-group').innerText = grp;
+                document.getElementById('tpl-time').innerText = gTime;
+                document.getElementById('tpl-scope-title').innerText = `تقرير شهر: ${month}`;
+
+                const tbody = document.getElementById('tpl-body');
+                tbody.innerHTML = "";
+                for(let j=1; j<=8; j++) {
+                    const sess = sData.find(s => s[4] == j);
+                    if(sess) tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td>${sess[9] || '-'}</td></tr>`;
+                    else tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>`;
+                }
+
+                const clonedNode = document.getElementById('pdf-template').cloneNode(true);
+                clonedNode.id = ""; 
+                clonedNode.classList.add('pdf-page');
+                clonedNode.style.display = "block";
+                
+                // إضافة فاصل صفحات CSS إذا لم يكن التقرير الأخير
+                if (i < uniqueStudents.length - 1) {
+                    clonedNode.style.pageBreakAfter = "always";
+                }
+                bulkContainer.appendChild(clonedNode);
+            }
+            
+            document.body.appendChild(bulkContainer);
+
+            const opt = { 
+                margin: 0, 
+                filename: `تقرير_مجمع_شهر_${month}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(bulkContainer).save().then(() => {
+                document.body.removeChild(bulkContainer);
+                status.innerText = "تم التحميل بنجاح! 🎉";
+            });
         }
 
         async function generateBulkZip() {
