@@ -167,6 +167,20 @@
                 <label>المجموعة</label>
                 <select id="view-group" onchange="loadGroupPerformances()"><option value="">اختر المجموعة...</option></select>
             </div>
+            <div class="form-group">
+                <label>رقم السيشن</label>
+                <select id="view-session" onchange="loadGroupPerformances()">
+                    <option value="all">كل السيشنات</option>
+                    <option value="1">سيشن 1</option>
+                    <option value="2">سيشن 2</option>
+                    <option value="3">سيشن 3</option>
+                    <option value="4">سيشن 4</option>
+                    <option value="5">سيشن 5</option>
+                    <option value="6">سيشن 6</option>
+                    <option value="7">سيشن 7</option>
+                    <option value="8">سيشن 8 (امتحان)</option>
+                </select>
+            </div>
         </div>
         <span id="group-perf-loader" class="loading-text">جاري تحميل البيانات...</span>
         <div class="table-container">
@@ -429,6 +443,7 @@
 
         function loadGroupPerformances() {
             const group = document.getElementById('view-group').value;
+            const sessionFilter = document.getElementById('view-session').value;
             const loader = document.getElementById('group-perf-loader');
             const tbody = document.getElementById('group-perf-tbody');
             if(!group) { tbody.innerHTML = '<tr><td colspan="8" style="color: var(--text-muted);">يرجى اختيار المجموعة لعرض الأداء</td></tr>'; return; }
@@ -442,7 +457,12 @@
                 loader.style.display = 'none';
                 tbody.innerHTML = "";
                 if(data.success) {
-                    const sessions = data.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group);
+                    let sessions = data.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group);
+                    
+                    if(sessionFilter !== 'all') {
+                        sessions = sessions.filter(s => s[4] == sessionFilter);
+                    }
+
                     if(sessions.length > 0) {
                         sessions.forEach(sess => {
                             tbody.innerHTML += `<tr>
@@ -457,7 +477,7 @@
                             </tr>`;
                         });
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="8">لا توجد أداءات مسجلة لهذه المجموعة</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8">لا توجد أداءات مسجلة لهذه المجموعة والسيشن</td></tr>';
                     }
                 } else {
                     alert("فشل جلب البيانات");
