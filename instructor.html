@@ -69,6 +69,7 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('tracking')">متابعة السيشنات</button>
         <button class="tab-btn" onclick="switchTab('manage')">إدارة المجموعات والطلاب</button>
+        <button class="tab-btn" onclick="switchTab('groups')">المجموعات</button>
         <button class="tab-btn" onclick="switchTab('dashboard')" style="background-color: #00d4ff; color: #000;">الداشبورد التحليلي</button>
     </div>
 
@@ -154,6 +155,29 @@
                 <thead><tr><th>اسم الطالب</th><th style="width: 100px;">إجراء</th></tr></thead>
                 <tbody id="manage-students-tbody">
                     <tr><td colspan="2" style="color: var(--text-muted);">يرجى اختيار المجموعة أولاً لعرض الطلاب</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="groups" class="tab-content">
+        <h3 style="color: var(--primary-color);">استعراض أداء المجموعات</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>المجموعة</label>
+                <select id="view-group" onchange="loadGroupPerformances()"><option value="">اختر المجموعة...</option></select>
+            </div>
+        </div>
+        <span id="group-perf-loader" class="loading-text">جاري تحميل البيانات...</span>
+        <div class="table-container">
+            <table id="group-perf-table">
+                <thead>
+                    <tr>
+                        <th>اسم الطالب</th><th>الشهر</th><th>السيشن</th><th>الحضور</th><th>التفاعل</th><th>التاسك</th><th>الامتحان</th><th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="group-perf-tbody">
+                    <tr><td colspan="8" style="color: var(--text-muted);">يرجى اختيار المجموعة لعرض الأداء</td></tr>
                 </tbody>
             </table>
         </div>
@@ -248,6 +272,7 @@
             }).then(res => res.json()).then(data => {
                 const trackSelect = document.getElementById('track-group');
                 const manageSelect = document.getElementById('manage-group-select');
+                const viewSelect = document.getElementById('view-group');
                 let options = '<option value="">اختر المجموعة...</option>';
                 if(data.success && data.data.length > 0) {
                     data.data.forEach(group => { options += `<option value="${group.groupName}">${group.groupName} (${group.days})</option>`; });
@@ -256,6 +281,7 @@
                 }
                 trackSelect.innerHTML = options;
                 manageSelect.innerHTML = options;
+                if(viewSelect) viewSelect.innerHTML = options;
             });
         }
 
@@ -349,29 +375,92 @@
             if(!group) return alert("يرجى اختيار المجموعة أولاً");
 
             loader.style.display = "inline-block";
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "getStudents", instructorName: currentUser.name, groupName: group }),
-                headers: { "Content-Type": "text/plain;charset=utf-8" }
-            }).then(res => res.json()).then(data => {
+            
+            // نجلب بيانات الطلاب والداشبورد معاً لملء التقييمات السابقة إن وجدت
+            Promise.all([
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "getStudents", instructorName: currentUser.name, groupName: group }),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                }).then(res => res.json()),
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "getDashboard" }),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                }).then(res => res.json())
+            ]).then(([studentsData, dashData]) => {
                 loader.style.display = "none";
                 tbody.innerHTML = "";
-                if(data.success && data.data.length > 0) {
-                    const sessionNum = document.getElementById('track-session').value;
+                
+                const month = document.getElementById('track-month').value;
+                const sessionNum = document.getElementById('track-session').value;
+                let existingSessions = [];
+                if(dashData.success) {
+                    existingSessions = dashData.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group && s[3] === month && s[4] == sessionNum);
+                }
+
+                if(studentsData.success && studentsData.data.length > 0) {
                     const displayExam = sessionNum === '8' ? 'table-cell' : 'none';
-                    data.data.forEach(student => {
+                    studentsData.data.forEach(student => {
+                        let existing = existingSessions.find(s => s[5] === student);
+                        let attendance = existing ? existing[6] : "حاضر";
+                        let interaction = existing ? existing[7] : 5;
+                        let task = existing ? existing[8] : 5;
+                        let notes = existing ? existing[9] : "";
+                        let examScore = existing ? existing[10] : "";
+                        
+                        let attOptions = `<option value="حاضر" ${attendance==='حاضر'?'selected':''}>حاضر</option><option value="غائب" ${attendance==='غائب'?'selected':''}>غائب</option>`;
+
                         tbody.innerHTML += `
                             <tr>
                                 <td>${student} <input type="hidden" class="s-name" value="${student}"></td>
-                                <td><select class="s-attendance"><option value="حاضر">حاضر</option><option value="غائب">غائب</option></select></td>
-                                <td><input type="number" class="s-interaction" min="0" max="5" value="5"></td>
-                                <td><input type="number" class="s-task" min="0" max="5" value="5"></td>
-                                <td><input type="text" class="s-notes" placeholder="ملاحظات..."></td>
-                                <td class="exam-col" style="display:${displayExam};"><input type="number" class="s-exam" min="0" max="100" placeholder="الدرجة"></td>
+                                <td><select class="s-attendance">${attOptions}</select></td>
+                                <td><input type="number" class="s-interaction" min="0" max="5" value="${interaction}"></td>
+                                <td><input type="number" class="s-task" min="0" max="5" value="${task}"></td>
+                                <td><input type="text" class="s-notes" placeholder="ملاحظات..." value="${notes}"></td>
+                                <td class="exam-col" style="display:${displayExam};"><input type="number" class="s-exam" min="0" max="100" placeholder="الدرجة" value="${examScore}"></td>
                             </tr>`;
                     });
                 } else {
                     tbody.innerHTML = '<tr><td colspan="6" style="color: #ff4757;">لا يوجد طلاب مسجلين في هذه المجموعة.</td></tr>';
+                }
+            });
+        }
+
+        function loadGroupPerformances() {
+            const group = document.getElementById('view-group').value;
+            const loader = document.getElementById('group-perf-loader');
+            const tbody = document.getElementById('group-perf-tbody');
+            if(!group) { tbody.innerHTML = '<tr><td colspan="8" style="color: var(--text-muted);">يرجى اختيار المجموعة لعرض الأداء</td></tr>'; return; }
+            
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getDashboard" }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                tbody.innerHTML = "";
+                if(data.success) {
+                    const sessions = data.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group);
+                    if(sessions.length > 0) {
+                        sessions.forEach(sess => {
+                            tbody.innerHTML += `<tr>
+                                <td>${sess[5]}</td>
+                                <td>${sess[3]}</td>
+                                <td>${sess[4]}</td>
+                                <td>${sess[6]}</td>
+                                <td>${sess[7]}</td>
+                                <td>${sess[8]}</td>
+                                <td>${sess[10] || '-'}</td>
+                                <td>${sess[9] || '-'}</td>
+                            </tr>`;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8">لا توجد أداءات مسجلة لهذه المجموعة</td></tr>';
+                    }
+                } else {
+                    alert("فشل جلب البيانات");
                 }
             });
         }
