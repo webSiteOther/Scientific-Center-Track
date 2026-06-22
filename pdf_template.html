@@ -17,6 +17,7 @@
             color: #131b2f;
             box-sizing: border-box;
         }
+
         .a4-container {
             width: 210mm;
             min-height: 297mm;
@@ -26,6 +27,7 @@
             box-sizing: border-box;
             position: relative;
         }
+
         /* الترويسة (Header) */
         .header {
             display: flex;
@@ -35,21 +37,25 @@
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
+
         .contact-info {
             font-size: 13px;
             line-height: 1.6;
             color: #131b2f;
             font-weight: bold;
         }
+
         .contact-info span {
             color: #00d4ff; /* الأيقونات أو التمييز بالسماوي */
             margin-left: 5px;
         }
+
         .logo {
             width: 100px;
             height: 100px;
             object-fit: contain;
         }
+
         /* عنوان التقرير وبيانات الطالب */
         .report-title {
             text-align: center;
@@ -59,6 +65,7 @@
             text-decoration: underline;
             text-decoration-color: #00d4ff;
         }
+
         .student-info-box {
             background-color: #f8f9fa;
             border: 1px solid #1e2a47;
@@ -69,16 +76,19 @@
             flex-wrap: wrap;
             justify-content: space-between;
         }
+
         .info-item {
             width: 48%;
             margin-bottom: 10px;
             font-size: 15px;
             font-weight: bold;
         }
+
         .info-item span {
             color: #1e2a47;
             font-weight: normal;
         }
+
         /* جدول الأداء */
         table {
             width: 100%;
@@ -86,6 +96,7 @@
             margin-bottom: 30px;
             text-align: center;
         }
+
         th, td {
             border: 1px solid #1e2a47;
             padding: 8px;
@@ -102,16 +113,20 @@
         th:nth-child(4) { width: 10%; }
         th:nth-child(5) { width: 10%; }
         th:nth-child(6) { width: 48%; }
+
         th {
             background-color: #131b2f;
             color: #ffffff;
         }
+
         tr:nth-child(even) {
             background-color: #f2f6f9;
         }
+
         /* تلوين الحضور والغياب */
         .present { color: #2ecc71; font-weight: bold; }
         .absent { color: #e74c3c; font-weight: bold; }
+
         /* التذييل (Footer) */
         .footer {
             position: absolute;
@@ -122,12 +137,14 @@
             border-top: 2px solid #1e2a47;
             padding-top: 15px;
         }
+
         .vision-title {
             color: #00d4ff;
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 5px;
         }
+
         .vision-text {
             color: #131b2f;
             font-size: 14px;
@@ -136,6 +153,7 @@
     </style>
 </head>
 <body>
+
     <div class="a4-container">
         
         <div class="header">
@@ -147,7 +165,9 @@
             </div>
             <img src="logo.jpeg" alt="المركز العلمي" class="logo">
         </div>
+
         <h2 class="report-title">تقرير الأداء الشهري</h2>
+
         <div class="student-info-box">
             <div class="info-item">اسم الطالب: <span><?= studentName ?></span></div>
             <div class="info-item">الشهر: <span><?= month ?></span></div>
@@ -155,6 +175,7 @@
             <div class="info-item">اسم المدرب: <span><?= instructorName ?></span></div>
             <div class="info-item">الميعاد: <span><?= time ?></span></div>
         </div>
+
         <table>
             <thead>
                 <tr>
@@ -191,12 +212,14 @@
                 <? } ?>
             </tbody>
         </table>
+
         <div style="display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-weight: bold; font-size: 14px;">
             <div style="width: 22%;">المدير<br><br>...................</div>
             <div style="width: 22%;">المسؤول العام<br><br>...................</div>
             <div style="width: 22%;">المدرب<br><br>...................</div>
             <div style="width: 30%;">ولي الأمر<br><br>...................<br><span style="font-size: 10px; font-weight: normal; color: #555;">برجاء كتابة تقييم واضح عن مدى تقييمك لأداء ابنك</span></div>
         </div>
+
         <div class="footer">
             <div style="margin-bottom: 10px; font-size: 13px; font-weight: bold; color: #131b2f;">
                 نسعى دائماً لنظهر بأفضل صورة تليق بولي الأمر، ويسعدنا جداً ويشرفنا تعليم ابنكم ليكون من أفضل الطلاب.
@@ -206,6 +229,8 @@
                 مؤسسة تعليمية واستشارية رائدة تهدف إلى بناء عقول مستنيرة قادرة على المنافسة في سوق العمل.
             </div>
         </div>
+
     </div>
+
 </body>
 </html>
