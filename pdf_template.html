@@ -99,8 +99,8 @@
 
         th, td {
             border: 1px solid #1e2a47;
-            padding: 12px;
-            font-size: 14px;
+            padding: 8px;
+            font-size: 13px;
         }
 
         th {
@@ -162,6 +162,7 @@
             <div class="info-item">الشهر: <span><?= month ?></span></div>
             <div class="info-item">القسم: <span><?= department ?></span></div>
             <div class="info-item">اسم المدرب: <span><?= instructorName ?></span></div>
+            <div class="info-item">الميعاد: <span><?= time ?></span></div>
         </div>
 
         <table>
@@ -201,7 +202,17 @@
             </tbody>
         </table>
 
+        <div style="display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-weight: bold; font-size: 14px;">
+            <div style="width: 22%;">المدير<br><br>...................</div>
+            <div style="width: 22%;">المسؤول العام<br><br>...................</div>
+            <div style="width: 22%;">المدرب<br><br>...................</div>
+            <div style="width: 30%;">ولي الأمر<br><br>...................<br><span style="font-size: 10px; font-weight: normal; color: #555;">برجاء كتابة تقييم واضح عن مدى تقييمك لأداء ابنك</span></div>
+        </div>
+
         <div class="footer">
+            <div style="margin-bottom: 10px; font-size: 13px; font-weight: bold; color: #131b2f;">
+                نسعى دائماً لنظهر بأفضل صورة تليق بولي الأمر، ويسعدنا جداً ويشرفنا تعليم ابنكم ليكون من أفضل الطلاب.
+            </div>
             <div class="vision-title">المركز العلمي _ خبرة سنين</div>
             <div class="vision-text">
                 مؤسسة تعليمية واستشارية رائدة تهدف إلى بناء عقول مستنيرة قادرة على المنافسة في سوق العمل.
