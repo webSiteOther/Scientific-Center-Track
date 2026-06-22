@@ -61,6 +61,7 @@
         .report-table th:nth-child(5) { width: 10%; }
         .report-table th:nth-child(6) { width: 10%; }
         .report-table th:nth-child(7) { width: 38%; }
+        .notes-cell { font-size: 9.5px !important; line-height: 1.6; text-align: right; }
         .report-table th { background-color: #f2f2f2; color: #131b2f; }
         .footer-contact p { margin: 5px 0; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 10px; justify-content: flex-start;}
     </style>
@@ -399,8 +400,8 @@
                     tbody.innerHTML = "";
                     for(let j=1; j<=8; j++) {
                         const sess = sData.find(s => s[4] == j);
-                        if(sess) tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td>${sess[9] || '-'}</td></tr>`;
-                        else tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>`;
+                        if(sess) tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td class="notes-cell" dir="auto">${sess[9] || '-'}</td></tr>`;
+                        else tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>-</td><td>-</td><td>-</td><td>-</td><td class="notes-cell" dir="auto">-</td></tr>`;
                     }
                     
                     bulkContainer.appendChild(clonedNode);
@@ -498,8 +499,8 @@
                     tbody.innerHTML = "";
                     for(let j=1; j<=8; j++) {
                         const sess = sData.find(s => s[4] == j);
-                        if(sess) tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td>${sess[9] || '-'}</td></tr>`;
-                        else tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>`;
+                        if(sess) tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td class="notes-cell" dir="auto">${sess[9] || '-'}</td></tr>`;
+                        else tbody.innerHTML += `<tr><td>${month}</td><td>سيشن ${j}</td><td>-</td><td>-</td><td>-</td><td>-</td><td class="notes-cell" dir="auto">-</td></tr>`;
                     }
 
                     bulkContainer.innerHTML = '';
@@ -563,7 +564,7 @@
             const tbody = document.getElementById('tpl-body');
             tbody.innerHTML = "";
             sessions.forEach(sess => {
-                tbody.innerHTML += `<tr><td>${sess[3]}</td><td>سيشن ${sess[4]}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td>${sess[9] || '-'}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${sess[3]}</td><td>سيشن ${sess[4]}</td><td>${sess[6]}</td><td>${sess[7]}</td><td>${sess[8]}</td><td>${sess[10] || '-'}</td><td class="notes-cell" dir="auto">${sess[9] || '-'}</td></tr>`;
             });
 
             const element = document.getElementById('pdf-template');
