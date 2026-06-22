@@ -50,9 +50,9 @@
         .radio-group { display: flex; gap: 20px; justify-content: center; margin-top: 15px; }
 
         /* قالب الـ PDF المخفي - مصمم ليتناسب تماما مع A4 */
-        #pdf-template { display: none; width: 210mm; min-height: 297mm; padding: 20mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; }
-        .report-table th, .report-table td { border: 1px solid #1e2a47; padding: 12px; font-size: 14px; }
+        #pdf-template { display: none; width: 210mm; min-height: 297mm; padding: 15mm; background-color: white; color: #131b2f; box-sizing: border-box; direction: rtl; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; }
+        .report-table th, .report-table td { border: 1px solid #1e2a47; padding: 6px; font-size: 13px; }
         .report-table th { background-color: #f2f2f2; color: #131b2f; }
         .footer-contact p { margin: 5px 0; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 10px; justify-content: flex-start;}
     </style>
@@ -137,14 +137,15 @@
             
             <h2 style="text-align: center; color: #131b2f; margin-bottom: 30px; text-decoration: underline; text-decoration-color: #ff9f43;">التقرير الأكاديمي لمتابعة مستوى الطالب</h2>
             
-            <div style="background-color: #f8f9fa; padding: 20px; border: 1px solid #1e2a47; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; justify-content: space-between;">
-                <div style="width: 48%; margin-bottom: 15px; font-size: 16px;"><strong>اسم الطالب:</strong> <span id="tpl-student" style="color: #00d4ff; font-weight: bold;"></span></div>
-                <div style="width: 48%; margin-bottom: 15px; font-size: 16px;"><strong>القسم:</strong> <span id="tpl-dept"></span></div>
-                <div style="width: 48%; margin-bottom: 15px; font-size: 16px;"><strong>المدرب:</strong> <span id="tpl-inst"></span></div>
-                <div style="width: 48%; margin-bottom: 15px; font-size: 16px;"><strong>المجموعة:</strong> <span id="tpl-group"></span></div>
+            <div style="background-color: #f8f9fa; padding: 15px; border: 1px solid #1e2a47; border-radius: 8px; margin-bottom: 15px; display: flex; flex-wrap: wrap; justify-content: space-between;">
+                <div style="width: 48%; margin-bottom: 10px; font-size: 14px;"><strong>اسم الطالب:</strong> <span id="tpl-student" style="color: #00d4ff; font-weight: bold;"></span></div>
+                <div style="width: 48%; margin-bottom: 10px; font-size: 14px;"><strong>القسم:</strong> <span id="tpl-dept"></span></div>
+                <div style="width: 48%; margin-bottom: 10px; font-size: 14px;"><strong>المدرب:</strong> <span id="tpl-inst"></span></div>
+                <div style="width: 48%; margin-bottom: 10px; font-size: 14px;"><strong>المجموعة:</strong> <span id="tpl-group"></span></div>
+                <div style="width: 48%; margin-bottom: 0px; font-size: 14px;"><strong>الميعاد:</strong> <span id="tpl-time"></span></div>
             </div>
             
-            <h4 style="color: #ff9f43; text-align: center; font-size: 18px;" id="tpl-scope-title"></h4>
+            <h4 style="color: #ff9f43; text-align: center; font-size: 16px; margin-bottom: 10px;" id="tpl-scope-title"></h4>
             
             <table class="report-table">
                 <thead>
@@ -153,9 +154,16 @@
                 <tbody id="tpl-body"></tbody>
             </table>
             
-            <div style="margin-top: 60px; text-align: center; border-top: 2px solid #131b2f; padding-top: 20px;">
-                <h3 style="color: #00d4ff; margin: 0 0 10px 0;">المركز العلمي _ خبرة سنين</h3>
-                <p style="font-size: 15px; font-weight: bold; color: #131b2f; margin: 0;">مؤسسة تعليمية واستشارية رائدة تهدف إلى بناء عقول مستنيرة قادرة على المنافسة في سوق العمل.</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-weight: bold; font-size: 14px;">
+                <div style="width: 22%;">المدير<br><br>...................</div>
+                <div style="width: 22%;">المسؤول العام<br><br>...................</div>
+                <div style="width: 22%;">المدرب<br><br>...................</div>
+                <div style="width: 30%;">ولي الأمر<br><br>...................<br><span style="font-size: 10px; font-weight: normal; color: #555;">برجاء كتابة تقييم واضح عن مدى تقييمك لأداء ابنك</span></div>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center; border-top: 2px solid #131b2f; padding-top: 15px;">
+                <p style="font-size: 13px; font-weight: bold; color: #131b2f; margin: 0 0 10px 0;">نسعى دائماً لنظهر بأفضل صورة تليق بولي الأمر، ويسعدنا جداً ويشرفنا تعليم ابنكم ليكون من أفضل الطلاب.</p>
+                <h3 style="color: #00d4ff; margin: 0 0 5px 0; font-size: 16px;">المركز العلمي _ خبرة سنين</h3>
             </div>
         </div>
     </div>
@@ -331,6 +339,7 @@
                 document.getElementById('tpl-dept').innerText = dept;
                 document.getElementById('tpl-inst').innerText = inst;
                 document.getElementById('tpl-group').innerText = grp;
+                document.getElementById('tpl-time').innerText = gTime;
                 document.getElementById('tpl-scope-title').innerText = `تقرير شهر: ${month}`;
 
                 const tbody = document.getElementById('tpl-body');
@@ -346,7 +355,7 @@
                 const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
                 element.style.display = 'none';
 
-                const fileName = `${sName}_${grp}_${gTime}_${month}_${dept}.pdf`;
+                const fileName = `${inst}_${dept}_${gTime}_${sName}.pdf`;
                 zip.file(fileName, pdfBlob);
             }
 
@@ -368,6 +377,9 @@
 
             let sessions = gData.sessions.slice(1).filter(s => s[5] === student && s[2] === grp);
             let scopeTitle = "التقرير الشامل من تاريخ الاشتراك";
+            
+            const grpInfo = gData.groups.find(g => g[2] === grp);
+            const gTime = grpInfo ? grpInfo[4] : "غير محدد";
 
             if(scope === 'month') {
                 const m = document.getElementById('rep-specific-month').value;
@@ -385,6 +397,7 @@
             document.getElementById('tpl-dept').innerText = dept;
             document.getElementById('tpl-inst').innerText = inst;
             document.getElementById('tpl-group').innerText = grp;
+            document.getElementById('tpl-time').innerText = gTime;
             document.getElementById('tpl-scope-title').innerText = scopeTitle;
 
             const tbody = document.getElementById('tpl-body');
@@ -395,7 +408,8 @@
 
             const element = document.getElementById('pdf-template');
             element.style.display = 'block';
-            const opt = { margin: 0, filename: `تقرير_${student}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+            const fileName = `${inst}_${dept}_${gTime}_${student}.pdf`;
+            const opt = { margin: 0, filename: fileName, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save().then(() => { element.style.display = 'none'; });
         }
 
