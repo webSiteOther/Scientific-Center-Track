@@ -95,13 +95,26 @@
             border-collapse: collapse;
             margin-bottom: 30px;
             text-align: center;
+            table-layout: fixed;
         }
 
         th, td {
             border: 1px solid #1e2a47;
             padding: 8px;
-            font-size: 13px;
+            font-size: 11px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            line-height: 1.4;
+            vertical-align: middle;
         }
+        
+        th:nth-child(1) { width: 12%; }
+        th:nth-child(2) { width: 10%; }
+        th:nth-child(3) { width: 10%; }
+        th:nth-child(4) { width: 10%; }
+        th:nth-child(5) { width: 10%; }
+        th:nth-child(6) { width: 48%; }
 
         th {
             background-color: #131b2f;
