@@ -99,7 +99,11 @@
                 </div>
                 <div class="form-group" style="max-width: 200px;">
                     <label>اختر المدرب (اختياري)</label>
-                    <select id="bulk-inst"><option value="all">كل المدربين</option></select>
+                    <select id="bulk-inst" onchange="fillBulkGroups()"><option value="all">كل المدربين</option></select>
+                </div>
+                <div class="form-group" style="max-width: 200px;">
+                    <label>اختر المجموعة (اختياري)</label>
+                    <select id="bulk-group"><option value="all">كل المجموعات</option></select>
                 </div>
             </div>
             <div style="display: flex; gap: 15px; justify-content: center;">
@@ -318,6 +322,7 @@
             if(repInstSelect) {
                 insts.forEach(i => { if(i && i !== 'مدير النظام' && i !== 'admin') repInstSelect.innerHTML += `<option value="${i}">${i}</option>`; });
             }
+            if (typeof fillBulkGroups === 'function') fillBulkGroups();
         }
 
         function fillRepInstructors() {
@@ -336,14 +341,32 @@
             document.getElementById('rep-student').innerHTML = '<option value="">اختر...</option>' + stds.map(s => `<option value="${s}">${s}</option>`).join('');
         }
 
+        function fillBulkGroups() {
+            const inst = document.getElementById('bulk-inst').value;
+            const bulkGroupSelect = document.getElementById('bulk-group');
+            if(!bulkGroupSelect) return;
+            bulkGroupSelect.innerHTML = '<option value="all">كل المجموعات</option>';
+            let grps = [];
+            if(inst !== 'all') {
+                grps = gData.groups.slice(1).filter(g => g[1] === inst).map(g => g[2]);
+            } else {
+                grps = [...new Set(gData.groups.slice(1).map(g => g[2]))];
+            }
+            grps.forEach(g => {
+                if(g) bulkGroupSelect.innerHTML += `<option value="${g}">${g}</option>`;
+            });
+        }
+
         async function generateBulkPDF() {
             const month = document.getElementById('bulk-month').value;
             const instFilter = document.getElementById('bulk-inst').value;
+            const groupFilter = document.getElementById('bulk-group') ? document.getElementById('bulk-group').value : 'all';
             if(!month) return alert("يرجى اختيار الشهر");
             
             const status = document.getElementById('zip-status');
             let monthSessions = gData.sessions.slice(1).filter(s => s[3] === month);
             if(instFilter !== 'all') monthSessions = monthSessions.filter(s => s[1] === instFilter);
+            if(groupFilter !== 'all') monthSessions = monthSessions.filter(s => s[2] === groupFilter);
             
             const uniqueRecords = [];
             const seen = new Set();
@@ -440,6 +463,7 @@
         async function generateBulkZip() {
             const month = document.getElementById('bulk-month').value;
             const instFilter = document.getElementById('bulk-inst').value;
+            const groupFilter = document.getElementById('bulk-group') ? document.getElementById('bulk-group').value : 'all';
             if(!month) return alert("يرجى اختيار الشهر");
             
             const status = document.getElementById('zip-status');
@@ -447,6 +471,7 @@
             
             let monthSessions = gData.sessions.slice(1).filter(s => s[3] === month);
             if(instFilter !== 'all') monthSessions = monthSessions.filter(s => s[1] === instFilter);
+            if(groupFilter !== 'all') monthSessions = monthSessions.filter(s => s[2] === groupFilter);
             
             const uniqueRecords = [];
             const seen = new Set();
