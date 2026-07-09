@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة المدرب - المركز العلمي</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --main-bg: #131b2f;
+            --card-bg: #1e2a47;
+            --primary-color: #00d4ff;
+            --text-light: #ffffff;
+            --text-muted: #a0aabf;
+            --danger: #ff4757;
+            --success: #2ecc71;
+            --warning: #ff9f43;
+        }
+
+        body {
+            margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--main-bg); color: var(--text-light);
+        }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--primary-color); }
+        .dashboard-header h2 { margin: 0; color: var(--primary-color); }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background-color: var(--card-bg); color: var(--text-light); border: 1px solid #2c3e50; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; }
+        .tab-btn.active, .tab-btn:hover { background-color: var(--primary-color); color: #000; }
+        .tab-content { display: none; background-color: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .tab-content.active { display: block; }
+        
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { color: var(--text-muted); font-size: 14px; font-weight: bold; }
+        .form-group input, .form-group select { padding: 12px; background-color: var(--main-bg); border: 1px solid #2c3e50; color: white; border-radius: 5px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary-color); }
+        
+        .action-btn { background-color: var(--primary-color); color: #000; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        .action-btn:hover { background-color: #00b4d8; }
+        .danger-btn { background-color: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .danger-btn:hover { background-color: #ff6b81; }
+
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; text-align: center; }
+        th, td { border: 1px solid #2c3e50; padding: 12px; }
+        th { background-color: var(--main-bg); color: var(--primary-color); }
+        td input, td select { width: 90%; padding: 8px; background-color: var(--main-bg); color: white; border: 1px solid #2c3e50; border-radius: 4px; text-align: center; }
+        .exam-col { display: none; background-color: rgba(255, 71, 87, 0.1); }
+        th.exam-col { color: var(--danger); }
+        .loading-text { color: var(--primary-color); font-weight: bold; display: none; margin-top: 10px;}
+
+        /* تنسيقات الداشبورد الخاصة بالمدرب */
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 20px; }
+        .chart-box { background-color: var(--main-bg); padding: 15px; border-radius: 10px; border: 1px solid #2c3e50; position: relative; }
+        .kpi-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background-color: var(--main-bg); padding: 20px; border-radius: 8px; text-align: center; border-bottom: 4px solid var(--primary-color); }
+        .kpi-card h3 { margin: 0 0 10px 0; font-size: 28px; color: var(--text-light); }
+        .kpi-card p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-header">
+        <h2 id="welcome-message">مرحباً بك</h2>
+        <button class="danger-btn" onclick="logout()" style="padding: 10px 20px;">تسجيل خروج</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tracking')">متابعة السيشنات</button>
+        <button class="tab-btn" onclick="switchTab('manage')">إدارة المجموعات والطلاب</button>
+        <button class="tab-btn" onclick="switchTab('groups')">المجموعات</button>
+        <button class="tab-btn" onclick="switchTab('dashboard')" style="background-color: #00d4ff; color: #000;">الداشبورد التحليلي</button>
+    </div>
+
+    <div id="tracking" class="tab-content active">
+        <h3 style="color: var(--primary-color);">تسجيل الحضور والتقييم</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>المجموعة</label>
+                <select id="track-group"><option value="">جاري تحميل المجموعات...</option></select>
+            </div>
+            <div class="form-group">
+                <label>الشهر</label>
+                <select id="track-month">
+                    <option value="يناير">يناير</option><option value="فبراير">فبراير</option>
+                    <option value="مارس">مارس</option><option value="أبريل">أبريل</option>
+                    <option value="مايو">مايو</option><option value="يونيو">يونيو</option>
+                    <option value="يوليو">يوليو</option><option value="أغسطس">أغسطس</option>
+                    <option value="سبتمبر">سبتمبر</option><option value="أكتوبر">أكتوبر</option>
+                    <option value="نوفمبر">نوفمبر</option><option value="ديسمبر">ديسمبر</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>رقم السيشن</label>
+                <select id="track-session" onchange="checkSessionNumber()">
+                    <option value="1">سيشن 1</option><option value="2">سيشن 2</option>
+                    <option value="3">سيشن 3</option><option value="4">سيشن 4</option>
+                    <option value="5">سيشن 5</option><option value="6">سيشن 6</option>
+                    <option value="7">سيشن 7</option><option value="8">سيشن 8 (امتحان)</option>
+                </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+                <button class="action-btn" onclick="loadStudentsForTracking()">عرض الطلاب للتقييم</button>
+            </div>
+        </div>
+
+        <span id="load-tracking-loader" class="loading-text">جاري جلب أسماء الطلاب...</span>
+
+        <div class="table-container">
+            <table id="tracking-table">
+                <thead>
+                    <tr>
+                        <th>اسم الطالب</th><th>الحضور</th><th>التفاعل (من 5)</th><th>التاسك (من 5)</th><th>ملاحظات</th><th class="exam-col">درجة الامتحان</th>
+                        <th class="english-col" style="display:none; color: var(--primary-color);">Speaking</th>
+                        <th class="english-col" style="display:none; color: var(--primary-color);">Writing</th>
+                        <th class="english-col" style="display:none; color: var(--primary-color);">Listening</th>
+                        <th class="english-col" style="display:none; color: var(--primary-color);">Reading</th>
+                    </tr>
+                </thead>
+                <tbody id="tracking-tbody">
+                    <tr><td colspan="6" style="color: var(--text-muted);">يرجى اختيار المجموعة والضغط على عرض الطلاب</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="text-align: left; margin-top: 15px;">
+            <span id="save-loader" class="loading-text">جاري حفظ التقييمات...</span>
+            <button class="action-btn" style="width: 100%; margin-top: 10px; background-color: var(--success); color: white;" onclick="saveTrackingData()">💾 حفظ التقييمات في قاعدة البيانات</button>
+        </div>
+    </div>
+
+    <div id="manage" class="tab-content">
+        <h3 style="color: var(--primary-color);">إضافة مجموعة جديدة</h3>
+        <div class="form-row">
+            <div class="form-group"><label>اسم المجموعة</label><input type="text" id="new-group-name" placeholder="مثال: مجموعة البرمجة المتقدمة"></div>
+            <div class="form-group"><label>الأيام</label><input type="text" id="new-group-days" placeholder="مثال: الأحد والأربعاء"></div>
+            <div class="form-group"><label>الساعات</label><input type="text" id="new-group-hours" placeholder="مثال: 5:00 م - 7:00 م"></div>
+            <div class="form-group" style="justify-content: flex-end;"><button class="action-btn" onclick="submitNewGroup()">حفظ المجموعة</button></div>
+        </div>
+        <span id="group-loader" class="loading-text">جاري حفظ المجموعة...</span>
+
+        <hr style="border-color: #2c3e50; margin: 30px 0;">
+
+        <h3 style="color: var(--warning);">إدارة طلاب المجموعة</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>اختر المجموعة لعرض طلابها</label>
+                <select id="manage-group-select" onchange="loadManageStudents()"><option value="">اختر المجموعة...</option></select>
+            </div>
+            <div class="form-group"><label>اسم الطالب الجديد</label><input type="text" id="new-student-name" placeholder="أدخل اسم الطالب الرباعي..."></div>
+            <div class="form-group" style="justify-content: flex-end;"><button class="action-btn" onclick="addNewStudent()" style="background-color: var(--warning);">إضافة طالب للمجموعة</button></div>
+        </div>
+
+        <span id="manage-students-loader" class="loading-text">جاري التحميل...</span>
+
+        <div class="table-container" style="max-width: 600px;">
+            <table id="manage-students-table">
+                <thead><tr><th>اسم الطالب</th><th style="width: 100px;">إجراء</th></tr></thead>
+                <tbody id="manage-students-tbody">
+                    <tr><td colspan="2" style="color: var(--text-muted);">يرجى اختيار المجموعة أولاً لعرض الطلاب</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="groups" class="tab-content">
+        <h3 style="color: var(--primary-color);">استعراض أداء المجموعات</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>المجموعة</label>
+                <select id="view-group" onchange="loadGroupPerformances()"><option value="">اختر المجموعة...</option></select>
+            </div>
+            <div class="form-group">
+                <label>رقم السيشن</label>
+                <select id="view-session" onchange="loadGroupPerformances()">
+                    <option value="all">كل السيشنات</option>
+                    <option value="1">سيشن 1</option>
+                    <option value="2">سيشن 2</option>
+                    <option value="3">سيشن 3</option>
+                    <option value="4">سيشن 4</option>
+                    <option value="5">سيشن 5</option>
+                    <option value="6">سيشن 6</option>
+                    <option value="7">سيشن 7</option>
+                    <option value="8">سيشن 8 (امتحان)</option>
+                </select>
+            </div>
+        </div>
+        <span id="group-perf-loader" class="loading-text">جاري تحميل البيانات...</span>
+        <div class="table-container">
+            <table id="group-perf-table">
+                <thead>
+                    <tr>
+                        <th>اسم الطالب</th><th>الشهر</th><th>السيشن</th><th>الحضور</th><th>التفاعل</th><th>التاسك</th><th>الامتحان</th><th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="group-perf-tbody">
+                    <tr><td colspan="8" style="color: var(--text-muted);">يرجى اختيار المجموعة لعرض الأداء</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="dashboard" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: var(--primary-color); margin: 0;">أداء مجموعاتي (Data Analytics)</h3>
+            <button class="action-btn" onclick="loadInstructorDashboard()" style="padding: 8px 15px; font-size: 14px;">🔄 تحديث البيانات</button>
+        </div>
+        <span id="dashboard-loader" class="loading-text">جاري تحليل البيانات واستخراج المؤشرات...</span>
+
+        <div class="kpi-cards" id="kpi-container" style="display: none;">
+            <div class="kpi-card" style="border-color: var(--primary-color);">
+                <h3 id="kpi-students">0</h3><p>إجمالي الطلاب</p>
+            </div>
+            <div class="kpi-card" style="border-color: var(--success);">
+                <h3 id="kpi-attendance">0%</h3><p>معدل الحضور العام</p>
+            </div>
+            <div class="kpi-card" style="border-color: var(--warning);">
+                <h3 id="kpi-interaction">0.0</h3><p>متوسط التفاعل (من 5)</p>
+            </div>
+            <div class="kpi-card" style="border-color: var(--danger);">
+                <h3 id="kpi-exam">0.0</h3><p>متوسط درجات الامتحان</p>
+            </div>
+        </div>
+
+        <div class="charts-grid" id="charts-container" style="display: none;">
+            <div class="chart-box"><canvas id="chart-attendance"></canvas></div>
+            <div class="chart-box"><canvas id="chart-group-perf"></canvas></div>
+            <div class="chart-box"><canvas id="chart-progress"></canvas></div>
+            <div class="chart-box"><canvas id="chart-exams"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        // الرابط الجديد
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsL3hY6CiM_IVHoNETxOjLnWv6I0cDnyOluW1v0er-mIR6YlHbh4SjAqOBZc-7_zRw/exec";
+        let currentUser = {};
+        let myCharts = {};
+
+        window.onload = function() {
+            const userInfoStr = sessionStorage.getItem('userInfo');
+            if(!userInfoStr) { window.location.href = "index.html"; return; }
+            
+            currentUser = JSON.parse(userInfoStr);
+            document.getElementById('welcome-message').innerText = "مرحباً بك، الكابتن " + currentUser.name;
+            
+            // تهيئة حقل السيشنات لـ g-maths
+            if (currentUser.dept === 'g-maths') {
+                const trackSessionSelect = document.getElementById('track-session');
+                trackSessionSelect.innerHTML = `
+                    <option value="1">سيشن 1</option>
+                    <option value="2">سيشن 2</option>
+                    <option value="3">سيشن 3</option>
+                    <option value="4">سيشن 4</option>
+                `;
+            }
+            
+            fetchInstructorGroups();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            // تحديث ستايل الزرار النشط
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.style.backgroundColor = 'var(--card-bg)';
+                btn.style.color = 'var(--text-light)';
+            });
+            
+            if(tabId === 'dashboard') {
+                event.target.style.backgroundColor = '#00d4ff';
+                event.target.style.color = '#000';
+                loadInstructorDashboard(); // تحميل البيانات فور فتح التاب
+            } else {
+                event.target.classList.add('active');
+                event.target.style.backgroundColor = 'var(--primary-color)';
+                event.target.style.color = '#000';
+            }
+        }
+
+        function checkSessionNumber() {
+            const sessionNum = document.getElementById('track-session').value;
+            const examCols = document.querySelectorAll('.exam-col');
+            const englishCols = document.querySelectorAll('.english-col');
+            if (sessionNum === '8') {
+                examCols.forEach(col => col.style.display = 'table-cell');
+                if (currentUser && currentUser.dept === 'انجلش') {
+                    englishCols.forEach(col => col.style.display = 'table-cell');
+                }
+            } else {
+                examCols.forEach(col => col.style.display = 'none');
+                englishCols.forEach(col => col.style.display = 'none');
+            }
+        }
+
+        function handleAttendanceChange(selectElement) {
+            if (selectElement.value === 'غائب') {
+                const tr = selectElement.closest('tr');
+                const intSelect = tr.querySelector('.s-interaction');
+                if (intSelect) intSelect.value = "0";
+                
+                const tskSelect = tr.querySelector('.s-task');
+                if (tskSelect) tskSelect.value = "0";
+                
+                const examInp = tr.querySelector('.s-exam');
+                if (examInp) examInp.value = "0";
+                
+                const enCols = ['.s-speaking', '.s-writing', '.s-listening', '.s-reading'];
+                enCols.forEach(cls => {
+                    const el = tr.querySelector(cls);
+                    if (el) el.value = "N/A (0%)";
+                });
+            }
+        }
+
+        function getEnglishOptions(selectedValue) {
+            const options = [
+                { val: 'Excellent (100%)', label: 'Excellent (100%)' },
+                { val: 'Very Good (85%)', label: 'Very Good (85%)' },
+                { val: 'Good (75%)', label: 'Good (75%)' },
+                { val: 'Fair (65%)', label: 'Fair (65%)' },
+                { val: 'Needs Improvement (50%)', label: 'Needs Improvement (50%)' },
+                { val: 'N/A (0%)', label: 'N/A (0%)' }
+            ];
+            let html = '<option value="">اختر التقييم...</option>';
+            options.forEach(opt => {
+                const sel = (selectedValue === opt.val) ? 'selected' : '';
+                html += `<option value="${opt.val}" ${sel}>${opt.label}</option>`;
+            });
+            return html;
+        }
+
+        // ===============================================
+        // 1. العمليات الأساسية (المجموعات والطلاب)
+        // ===============================================
+
+        function fetchInstructorGroups() {
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getGroups", instructorName: currentUser.name }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                const trackSelect = document.getElementById('track-group');
+                const manageSelect = document.getElementById('manage-group-select');
+                const viewSelect = document.getElementById('view-group');
+                let options = '<option value="">اختر المجموعة...</option>';
+                if(data.success && data.data.length > 0) {
+                    data.data.forEach(group => { options += `<option value="${group.groupName}">${group.groupName} (${group.days})</option>`; });
+                } else {
+                    options = '<option value="">لا توجد مجموعات مسجلة</option>';
+                }
+                trackSelect.innerHTML = options;
+                manageSelect.innerHTML = options;
+                if(viewSelect) viewSelect.innerHTML = options;
+            });
+        }
+
+        function submitNewGroup() {
+            const gName = document.getElementById('new-group-name').value.trim();
+            const gDays = document.getElementById('new-group-days').value.trim();
+            const gHours = document.getElementById('new-group-hours').value.trim();
+            const loader = document.getElementById('group-loader');
+            if(!gName || !gDays || !gHours) return alert("يرجى ملء جميع بيانات المجموعة");
+            
+            loader.style.display = 'block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "addGroup", groupData: { instructorName: currentUser.name, groupName: gName, days: gDays, hours: gHours } }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if(data.success) {
+                    alert("تمت إضافة المجموعة بنجاح!");
+                    document.getElementById('new-group-name').value = ""; document.getElementById('new-group-days').value = ""; document.getElementById('new-group-hours').value = "";
+                    fetchInstructorGroups();
+                } else alert(data.message);
+            });
+        }
+
+        function loadManageStudents() {
+            const group = document.getElementById('manage-group-select').value;
+            const tbody = document.getElementById('manage-students-tbody');
+            const loader = document.getElementById('manage-students-loader');
+            if(!group) { tbody.innerHTML = '<tr><td colspan="2" style="color: var(--text-muted);">يرجى اختيار المجموعة أولاً</td></tr>'; return; }
+
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getStudents", instructorName: currentUser.name, groupName: group }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                tbody.innerHTML = "";
+                if(data.success && data.data.length > 0) {
+                    data.data.forEach(student => {
+                        tbody.innerHTML += `<tr><td>${student}</td><td><button class="danger-btn" onclick="removeStudent('${student}')">حذف</button></td></tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2">لا يوجد طلاب في هذه المجموعة حالياً</td></tr>';
+                }
+            });
+        }
+
+        function addNewStudent() {
+            const group = document.getElementById('manage-group-select').value;
+            const studentName = document.getElementById('new-student-name').value.trim();
+            const loader = document.getElementById('manage-students-loader');
+            if(!group || !studentName) return alert("يرجى اختيار المجموعة وكتابة اسم الطالب");
+            
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "addStudent", instructorName: currentUser.name, groupName: group, studentName: studentName }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if(data.success) {
+                    document.getElementById('new-student-name').value = "";
+                    loadManageStudents();
+                } else alert(data.message);
+            });
+        }
+
+        function removeStudent(studentName) {
+            if(!confirm(`هل أنت متأكد من حذف الطالب (${studentName})؟`)) return;
+            const group = document.getElementById('manage-group-select').value;
+            const loader = document.getElementById('manage-students-loader');
+            
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "deleteStudent", instructorName: currentUser.name, groupName: group, studentName: studentName }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if(data.success) loadManageStudents();
+                else alert(data.message);
+            });
+        }
+
+        function loadStudentsForTracking() {
+            const group = document.getElementById('track-group').value;
+            const loader = document.getElementById('load-tracking-loader');
+            const tbody = document.getElementById('tracking-tbody');
+            if(!group) return alert("يرجى اختيار المجموعة أولاً");
+
+            loader.style.display = "inline-block";
+            
+            // نجلب بيانات الطلاب والداشبورد معاً لملء التقييمات السابقة إن وجدت
+            Promise.all([
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "getStudents", instructorName: currentUser.name, groupName: group }),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                }).then(res => res.json()),
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "getDashboard" }),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                }).then(res => res.json())
+            ]).then(([studentsData, dashData]) => {
+                loader.style.display = "none";
+                tbody.innerHTML = "";
+                
+                const month = document.getElementById('track-month').value;
+                const sessionNum = document.getElementById('track-session').value;
+                let existingSessions = [];
+                if(dashData.success) {
+                    existingSessions = dashData.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group && s[3] === month && s[4] == sessionNum);
+                }
+
+                if(studentsData.success && studentsData.data.length > 0) {
+            const displayExam = sessionNum === '8' ? 'table-cell' : 'none';
+            const displayEnglish = (sessionNum === '8' && currentUser.dept === 'انجلش') ? 'table-cell' : 'none';
+            
+            studentsData.data.forEach(student => {
+                let existing = existingSessions.find(s => s[5] === student);
+                let attendance = existing ? existing[6] : "حاضر";
+                let interaction = existing ? existing[7] : 5;
+                let task = existing ? existing[8] : 5;
+                let notes = existing ? existing[9] : "";
+                let examScore = existing ? existing[10] : "";
+                
+                let attOptions = `<option value="حاضر" ${attendance==='حاضر'?'selected':''}>حاضر</option><option value="غائب" ${attendance==='غائب'?'selected':''}>غائب</option>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${student} <input type="hidden" class="s-name" value="${student}"></td>
+                        <td><select class="s-attendance" onchange="handleAttendanceChange(this)">${attOptions}</select></td>
+                        <td>
+                            <select class="s-interaction">
+                                <option value="5" ${interaction==5?'selected':''}>5</option>
+                                <option value="4" ${interaction==4?'selected':''}>4</option>
+                                <option value="3" ${interaction==3?'selected':''}>3</option>
+                                <option value="2" ${interaction==2?'selected':''}>2</option>
+                                <option value="1" ${interaction==1?'selected':''}>1</option>
+                                <option value="0" ${interaction==0?'selected':''}>0</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="s-task">
+                                <option value="5" ${task==5?'selected':''}>5</option>
+                                <option value="4" ${task==4?'selected':''}>4</option>
+                                <option value="3" ${task==3?'selected':''}>3</option>
+                                <option value="2" ${task==2?'selected':''}>2</option>
+                                <option value="1" ${task==1?'selected':''}>1</option>
+                                <option value="0" ${task==0?'selected':''}>0</option>
+                            </select>
+                        </td>
+                        <td><input type="text" class="s-notes" placeholder="ملاحظات..." value="${notes}"></td>
+                        <td class="exam-col" style="display:${displayExam};"><input type="number" class="s-exam" min="0" max="100" placeholder="الدرجة" value="${examScore}"></td>
+                        <td class="english-col" style="display:${displayEnglish};">
+                            <select class="s-speaking">${getEnglishOptions(existing ? existing[11] : '')}</select>
+                        </td>
+                        <td class="english-col" style="display:${displayEnglish};">
+                            <select class="s-writing">${getEnglishOptions(existing ? existing[12] : '')}</select>
+                        </td>
+                        <td class="english-col" style="display:${displayEnglish};">
+                            <select class="s-listening">${getEnglishOptions(existing ? existing[13] : '')}</select>
+                        </td>
+                        <td class="english-col" style="display:${displayEnglish};">
+                            <select class="s-reading">${getEnglishOptions(existing ? existing[14] : '')}</select>
+                        </td>
+                    </tr>`;
+            });
+        } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="color: #ff4757;">لا يوجد طلاب مسجلين في هذه المجموعة.</td></tr>';
+                }
+            });
+        }
+
+        function loadGroupPerformances() {
+            const group = document.getElementById('view-group').value;
+            const sessionFilter = document.getElementById('view-session').value;
+            const loader = document.getElementById('group-perf-loader');
+            const tbody = document.getElementById('group-perf-tbody');
+            if(!group) { tbody.innerHTML = '<tr><td colspan="8" style="color: var(--text-muted);">يرجى اختيار المجموعة لعرض الأداء</td></tr>'; return; }
+            
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getDashboard" }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                tbody.innerHTML = "";
+                if(data.success) {
+                    let sessions = data.data.slice(1).filter(s => s[1] === currentUser.name && s[2] === group);
+                    
+                    if(sessionFilter !== 'all') {
+                        sessions = sessions.filter(s => s[4] == sessionFilter);
+                    }
+
+                    if(sessions.length > 0) {
+                        sessions.forEach(sess => {
+                            tbody.innerHTML += `<tr>
+                                <td>${sess[5]}</td>
+                                <td>${sess[3]}</td>
+                                <td>${sess[4]}</td>
+                                <td>${sess[6]}</td>
+                                <td>${sess[7]}</td>
+                                <td>${sess[8]}</td>
+                                <td>${sess[10] || '-'}</td>
+                                <td>${sess[9] || '-'}</td>
+                            </tr>`;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8">لا توجد أداءات مسجلة لهذه المجموعة والسيشن</td></tr>';
+                    }
+                } else {
+                    alert("فشل جلب البيانات");
+                }
+            });
+        }
+
+        function saveTrackingData() {
+            const group = document.getElementById('track-group').value;
+            const month = document.getElementById('track-month').value;
+            const session = document.getElementById('track-session').value;
+            const loader = document.getElementById('save-loader');
+            if(!group) return alert("يرجى اختيار المجموعة وعرض الطلاب أولاً!");
+
+            const rows = document.querySelectorAll('#tracking-tbody tr');
+            if(rows.length === 0 || rows[0].innerText.includes("لا يوجد")) return alert("لا يوجد طلاب مسجلين في الجدول لحفظ بياناتهم!");
+
+            let sessionData = [];
+            rows.forEach(row => {
+                sessionData.push({
+                    instructorName: currentUser.name, groupName: group, month: month, sessionNumber: session,
+                    studentName: row.querySelector('.s-name').value,
+                    attendance: row.querySelector('.s-attendance').value,
+                    interaction: row.querySelector('.s-interaction').value,
+                    task: row.querySelector('.s-task').value,
+                    notes: row.querySelector('.s-notes').value,
+                    examScore: row.querySelector('.s-exam') ? row.querySelector('.s-exam').value : 0,
+                    speaking: row.querySelector('.s-speaking') ? row.querySelector('.s-speaking').value : "",
+                    writing: row.querySelector('.s-writing') ? row.querySelector('.s-writing').value : "",
+                    listening: row.querySelector('.s-listening') ? row.querySelector('.s-listening').value : "",
+                    reading: row.querySelector('.s-reading') ? row.querySelector('.s-reading').value : ""
+                });
+            });
+
+            loader.style.display = "inline-block";
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "saveTracking", sessionData: sessionData }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = "none";
+                if(data.success) {
+                    alert("تم حفظ درجات السيشن بنجاح!");
+                    document.getElementById('tracking-tbody').innerHTML = '<tr><td colspan="6" style="color: var(--text-muted);">تم الحفظ. اختر مجموعة جديدة للتقييم.</td></tr>';
+                } else alert(data.message);
+            });
+        }
+
+        // ===============================================
+        // 2. الداشبورد التحليلي (Data Analyst Logic)
+        // ===============================================
+
+        function loadInstructorDashboard() {
+            document.getElementById('dashboard-loader').style.display = 'block';
+            document.getElementById('kpi-container').style.display = 'none';
+            document.getElementById('charts-container').style.display = 'none';
+
+            // سحب كل بيانات السيشنات واستخلاص ما يخص هذا المدرب فقط
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getDashboard" }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                document.getElementById('dashboard-loader').style.display = 'none';
+                if(data.success) {
+                    // فلترة البيانات لتشمل المدرب الحالي فقط
+                    let mySessions = data.data.slice(1).filter(row => row[1] === currentUser.name);
+                    
+                    if(mySessions.length === 0) {
+                        document.getElementById('dashboard-loader').innerText = "لا توجد بيانات تقييم كافية لعرض التحليلات بعد.";
+                        document.getElementById('dashboard-loader').style.display = 'block';
+                        return;
+                    }
+
+                    document.getElementById('kpi-container').style.display = 'grid';
+                    document.getElementById('charts-container').style.display = 'grid';
+                    analyzeAndDrawCharts(mySessions);
+                } else {
+                    alert("فشل جلب بيانات الداشبورد");
+                }
+            }).catch(err => {
+                document.getElementById('dashboard-loader').style.display = 'none';
+                console.error(err);
+            });
+        }
+
+        function analyzeAndDrawCharts(sessions) {
+            // --- 1. حساب الـ KPIs السريعة ---
+            const uniqueStudents = [...new Set(sessions.map(s => s[5]))];
+            const presentCount = sessions.filter(s => s[6] === 'حاضر').length;
+            const totalRecords = sessions.length;
+            const attendanceRate = totalRecords > 0 ? ((presentCount / totalRecords) * 100).toFixed(1) : 0;
+            
+            const avgInteraction = (sessions.reduce((acc, curr) => acc + (Number(curr[7]) || 0), 0) / totalRecords).toFixed(2);
+            
+            const examSessions = sessions.filter(s => s[10] > 0);
+            const avgExam = examSessions.length > 0 ? (examSessions.reduce((acc, curr) => acc + (Number(curr[10]) || 0), 0) / examSessions.length).toFixed(1) : 0;
+
+            document.getElementById('kpi-students').innerText = uniqueStudents.length;
+            document.getElementById('kpi-attendance').innerText = attendanceRate + '%';
+            document.getElementById('kpi-interaction').innerText = avgInteraction;
+            document.getElementById('kpi-exam').innerText = avgExam;
+
+            // --- 2. تجهيز ورسم الـ Charts ---
+            Chart.defaults.color = '#a0aabf';
+            Chart.defaults.font.family = 'Segoe UI';
+
+            // A. شارت الحضور (Pie)
+            const absentCount = totalRecords - presentCount;
+            drawChart('chart-attendance', 'pie', ['حاضر', 'غائب'], [presentCount, absentCount], 'معدل الحضور العام', ['#2ecc71', '#ff4757']);
+
+            // B. أداء المجموعات - تفاعل وتاسك (Bar)
+            const myGroups = [...new Set(sessions.map(s => s[2]))];
+            const grpInt = myGroups.map(g => {
+                const gSess = sessions.filter(s => s[2] === g);
+                return (gSess.reduce((a, b) => a + (Number(b[7])||0), 0) / gSess.length).toFixed(1);
+            });
+            const grpTask = myGroups.map(g => {
+                const gSess = sessions.filter(s => s[2] === g);
+                return (gSess.reduce((a, b) => a + (Number(b[8])||0), 0) / gSess.length).toFixed(1);
+            });
+            drawChart('chart-group-perf', 'bar', myGroups, [
+                { label: 'متوسط التفاعل', data: grpInt, backgroundColor: '#00d4ff' },
+                { label: 'متوسط التاسك', data: grpTask, backgroundColor: '#ff9f43' }
+            ], 'مقارنة أداء المجموعات');
+
+            // C. تطور الطلاب عبر السيشنات (Line)
+            const sessionNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
+            const progressData = sessionNumbers.map(n => {
+                const s = sessions.filter(x => x[4] == n);
+                return s.length ? (s.reduce((a, b) => a + (Number(b[7])||0), 0) / s.length).toFixed(1) : 0;
+            });
+            drawChart('chart-progress', 'line', sessionNumbers.map(n => 'سيشن ' + n), progressData, 'متوسط التفاعل عبر السيشنات', '#ff9f43');
+
+            // D. توزيع درجات الامتحان للمجموعات (Bar)
+            const grpExams = myGroups.map(g => {
+                const gExams = examSessions.filter(s => s[2] === g);
+                return gExams.length ? (gExams.reduce((a, b) => a + (Number(b[10])||0), 0) / gExams.length).toFixed(1) : 0;
+            });
+            drawChart('chart-exams', 'bar', myGroups, grpExams, 'متوسط درجات الامتحان النهائي', '#9b59b6');
+        }
+
+        function drawChart(canvasId, type, labels, data, title, color='#00d4ff') {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if(myCharts[canvasId]) myCharts[canvasId].destroy();
+
+            let datasets = Array.isArray(data) && typeof data[0] === 'object' ? data : [{
+                label: title,
+                data: data,
+                backgroundColor: color,
+                borderColor: type === 'line' ? color : '#131b2f',
+                borderWidth: 2,
+                fill: type === 'line' ? false : true,
+                tension: 0.3
+            }];
+
+            myCharts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    plugins: { 
+                        title: { display: true, text: title, color: '#ffffff', font: {size: 16} },
+                        legend: { position: 'bottom' }
+                    },
+                    scales: (type === 'bar' || type === 'line') ? { y: { beginAtZero: true } } : {}
+                }
+            });
+        }
+
+        function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
+    </script>
+</body>
+</html>
