@@ -148,13 +148,7 @@
 
     <div id="instructors-dashboard" class="tab-content">
         <h3 style="color: var(--primary-color);">لوحة متابعة المدربين والمجموعات</h3>
-        <div class="form-row" style="background: var(--main-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <div class="form-group">
-                <label>بحث باسم المدرب أو المجموعة:</label>
-                <input type="text" id="instructor-search-input" oninput="filterInstructorsDashboard()" placeholder="اكتب اسم المدرب أو المجموعة للبحث..." style="width: 100%; box-sizing: border-box;">
-            </div>
-        </div>
-        <div id="instructors-dashboard-container" style="display: flex; flex-direction: column; gap: 20px;">
+        <div id="instructors-dashboard-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 15px;">
             <!-- سيتم توليد الكروت هنا ديناميكياً -->
         </div>
     </div>
@@ -839,21 +833,8 @@
                 
                 let groupsHtml = '';
                 if (instGroups.length === 0) {
-                    groupsHtml = `<p style="color: var(--text-muted); font-style: italic; padding: 10px;">لا توجد مجموعات مسجلة لهذا المدرب حالياً.</p>`;
+                    groupsHtml = `<p style="color: var(--text-muted); font-style: italic; padding: 5px 0; margin: 0;">لا توجد مجموعات مسجلة حالياً.</p>`;
                 } else {
-                    groupsHtml = `
-                        <table class="report-table" style="width: 100%; margin-top: 10px; background: var(--card-bg); text-align: center;">
-                            <thead>
-                                <tr style="background: var(--main-bg);">
-                                    <th style="color: var(--primary-color);">المجموعة</th>
-                                    <th style="color: var(--primary-color);">عدد الشهور المسجلة</th>
-                                    <th style="color: var(--primary-color);">تفصيل الشهور والسيشنات</th>
-                                    <th style="color: var(--primary-color);">آخر سيشن تم تسجيلها</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
                     instGroups.forEach(group => {
                         const groupName = group[2];
                         
@@ -861,14 +842,12 @@
                         const groupSessions = gData.sessions.slice(1).filter(s => s[1] === instName && s[2] === groupName);
                         
                         // تجميع الشهور المسجلة وتفاصيل كل شهر
-                        const monthsSet = new Set();
                         const monthDetails = {};
                         
                         groupSessions.forEach(s => {
                             const m = s[3];
                             const sessNum = Number(s[4]);
                             if (m) {
-                                monthsSet.add(m);
                                 if (!monthDetails[m]) {
                                     monthDetails[m] = {
                                         sessions: new Set(),
@@ -882,76 +861,51 @@
                             }
                         });
                         
-                        const monthsCount = monthsSet.size;
+                        let monthsListHtml = '';
+                        const monthsKeys = Object.keys(monthDetails);
                         
-                        let monthlyBreakdown = '';
-                        let latestMonth = '';
-                        let latestMaxSession = 0;
-                        
-                        if (monthsCount === 0) {
-                            monthlyBreakdown = '<span style="color: var(--text-muted);">لا توجد تقييمات مسجلة</span>';
+                        if (monthsKeys.length === 0) {
+                            monthsListHtml = `<li style="color: var(--text-muted); list-style: none; margin: 0; padding: 0;">لا توجد سيشنات مسجلة بعد</li>`;
                         } else {
-                            const breakdownParts = [];
-                            Object.keys(monthDetails).forEach(m => {
+                            monthsKeys.forEach(m => {
                                 const detail = monthDetails[m];
-                                const totalSessInMonth = detail.sessions.size;
-                                breakdownParts.push(`<strong style="color: var(--accent-blue);">${m}</strong>: (${totalSessInMonth} سيشنات، أقصى سيشن تم الوصول إليها: ${detail.maxSession})`);
-                                
-                                latestMonth = m;
-                                latestMaxSession = detail.maxSession;
+                                const totalSess = detail.sessions.size;
+                                monthsListHtml += `
+                                    <li style="margin-bottom: 8px; font-size: 14px; color: var(--text-light); line-height: 1.5; list-style-type: none; padding-right: 15px; position: relative;">
+                                        <span style="position: absolute; right: 0; color: var(--accent-blue);">📅</span> 
+                                        شهر <strong style="color: var(--accent-blue);">${m}</strong>: 
+                                        تم تسجيل <strong style="color: var(--primary-color);">${totalSess}</strong> سيشن(ات)، 
+                                        ووصل لـ <strong style="color: #2ecc71;">سيشن رقم ${detail.maxSession}</strong>
+                                    </li>
+                                `;
                             });
-                            monthlyBreakdown = breakdownParts.join('<br>');
-                        }
-                        
-                        let latestStatus = '-';
-                        if (latestMonth) {
-                            latestStatus = `<span style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${latestMonth} - سيشن ${latestMaxSession}</span>`;
                         }
                         
                         groupsHtml += `
-                            <tr>
-                                <td style="font-weight: bold; color: white;">${groupName}</td>
-                                <td><span style="font-size: 16px; font-weight: bold; color: var(--primary-color);">${monthsCount}</span> شهور</td>
-                                <td style="text-align: right; padding: 10px; font-size: 13px; line-height: 1.6;">${monthlyBreakdown}</td>
-                                <td>${latestStatus}</td>
-                            </tr>
+                            <div style="background: var(--main-bg); border: 1px solid #2c3e50; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                                <h5 style="margin: 0 0 10px 0; color: var(--primary-color); font-size: 15px;">👥 مجموعة: ${groupName}</h5>
+                                <ul style="margin: 0; padding: 0;">
+                                    ${monthsListHtml}
+                                </ul>
+                            </div>
                         `;
                     });
-                    
-                    groupsHtml += `
-                            </tbody>
-                        </table>
-                    `;
                 }
                 
                 html += `
-                    <div class="instructor-dashboard-card" data-inst-name="${instName.toLowerCase()}" data-groups="${instGroups.map(g => g[2].toLowerCase()).join(' ')}" style="background: var(--card-bg); border: 1px solid #2c3e50; border-radius: 10px; padding: 20px; border-top: 4px solid var(--primary-color);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2c3e50; padding-bottom: 10px; margin-bottom: 15px;">
-                            <h4 style="margin: 0; color: var(--primary-color); font-size: 18px;">الكابتن: ${instName}</h4>
-                            <span style="background: rgba(0, 212, 255, 0.1); color: var(--accent-blue); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold;">قسم: ${instDept || 'غير محدد'}</span>
+                    <div style="background: var(--card-bg); border: 1px solid #2c3e50; border-radius: 10px; padding: 15px; border-top: 4px solid var(--primary-color); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2c3e50; padding-bottom: 8px; margin-bottom: 10px;">
+                                <h4 style="margin: 0; color: var(--text-light); font-size: 16px;">👨‍🏫 الكابتن: ${instName}</h4>
+                                <span style="background: rgba(0, 212, 255, 0.1); color: var(--accent-blue); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">${instDept || 'عام'}</span>
+                            </div>
+                            ${groupsHtml}
                         </div>
-                        ${groupsHtml}
                     </div>
                 `;
             });
             
             container.innerHTML = html;
-        }
-
-        function filterInstructorsDashboard() {
-            const query = document.getElementById('instructor-search-input').value.toLowerCase().trim();
-            const cards = document.querySelectorAll('.instructor-dashboard-card');
-            
-            cards.forEach(card => {
-                const instName = card.getAttribute('data-inst-name');
-                const groups = card.getAttribute('data-groups');
-                
-                if (instName.includes(query) || groups.includes(query)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
         }
 
         function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
