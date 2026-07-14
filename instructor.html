@@ -143,20 +143,35 @@
         <hr style="border-color: #2c3e50; margin: 30px 0;">
 
         <h3 style="color: var(--warning);">إدارة طلاب المجموعة</h3>
-        <div class="form-row">
+        <div class="form-row" style="align-items: flex-end;">
             <div class="form-group">
-                <label>اختر المجموعة لعرض طلابها</label>
-                <select id="manage-group-select" onchange="loadManageStudents()"><option value="">اختر المجموعة...</option></select>
+                <label>اختر المجموعة لعرض طلابها وإدارتها</label>
+                <select id="manage-group-select" onchange="onManageGroupChange()"><option value="">اختر المجموعة...</option></select>
             </div>
-            <div class="form-group"><label>اسم الطالب الجديد</label><input type="text" id="new-student-name" placeholder="أدخل اسم الطالب الرباعي..."></div>
-            <div class="form-group" style="justify-content: flex-end;"><button class="action-btn" onclick="addNewStudent()" style="background-color: var(--warning);">إضافة طالب للمجموعة</button></div>
+            <div class="form-group" id="edit-group-name-container" style="display: none; flex: 1.5;">
+                <label>تعديل اسم المجموعة الحالية</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="edit-group-name-input" placeholder="الاسم الجديد للمجموعة..." style="flex: 1;">
+                    <button class="action-btn" onclick="submitEditGroupName()" style="background-color: var(--primary-color); color: black; white-space: nowrap;">تعديل الاسم</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row" id="add-student-container" style="display: none; align-items: flex-end;">
+            <div class="form-group" style="flex: 2;">
+                <label>اسم الطالب الجديد</label>
+                <input type="text" id="new-student-name" placeholder="أدخل اسم الطالب الرباعي...">
+            </div>
+            <div class="form-group" style="justify-content: flex-end; max-width: 200px;">
+                <button class="action-btn" onclick="addNewStudent()" style="background-color: var(--warning); width: 100%; white-space: nowrap;">إضافة طالب للمجموعة</button>
+            </div>
         </div>
 
         <span id="manage-students-loader" class="loading-text">جاري التحميل...</span>
 
-        <div class="table-container" style="max-width: 600px;">
+        <div class="table-container" style="max-width: 700px;">
             <table id="manage-students-table">
-                <thead><tr><th>اسم الطالب</th><th style="width: 100px;">إجراء</th></tr></thead>
+                <thead><tr><th>اسم الطالب</th><th style="width: 220px;">إجراءات</th></tr></thead>
                 <tbody id="manage-students-tbody">
                     <tr><td colspan="2" style="color: var(--text-muted);">يرجى اختيار المجموعة أولاً لعرض الطلاب</td></tr>
                 </tbody>
@@ -336,7 +351,7 @@
         // 1. العمليات الأساسية (المجموعات والطلاب)
         // ===============================================
 
-        function fetchInstructorGroups() {
+        function fetchInstructorGroups(selectGroupName) {
             fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "getGroups", instructorName: currentUser.name }),
@@ -354,6 +369,11 @@
                 trackSelect.innerHTML = options;
                 manageSelect.innerHTML = options;
                 if(viewSelect) viewSelect.innerHTML = options;
+
+                if (selectGroupName) {
+                    manageSelect.value = selectGroupName;
+                    onManageGroupChange();
+                }
             });
         }
 
@@ -379,6 +399,56 @@
             });
         }
 
+        function onManageGroupChange() {
+            const group = document.getElementById('manage-group-select').value;
+            const editContainer = document.getElementById('edit-group-name-container');
+            const addStudentContainer = document.getElementById('add-student-container');
+            const editInput = document.getElementById('edit-group-name-input');
+            
+            if (group) {
+                editContainer.style.display = 'block';
+                addStudentContainer.style.display = 'flex';
+                editInput.value = group;
+                loadManageStudents();
+            } else {
+                editContainer.style.display = 'none';
+                addStudentContainer.style.display = 'none';
+                document.getElementById('manage-students-tbody').innerHTML = '<tr><td colspan="2" style="color: var(--text-muted);">يرجى اختيار المجموعة أولاً لعرض الطلاب</td></tr>';
+            }
+        }
+
+        function submitEditGroupName() {
+            const oldGroupName = document.getElementById('manage-group-select').value;
+            const newGroupName = document.getElementById('edit-group-name-input').value.trim();
+            if (!oldGroupName) return;
+            if (!newGroupName) return alert("يرجى إدخال اسم المجموعة الجديد");
+            if (oldGroupName === newGroupName) return alert("الاسم الجديد مطابق للاسم الحالي");
+            
+            if (!confirm(`هل أنت متأكد من تغيير اسم المجموعة من (${oldGroupName}) إلى (${newGroupName})؟ سيتم تحديث جميع بيانات الطلاب والتقييمات التابعة لها.`)) return;
+            
+            const loader = document.getElementById('manage-students-loader');
+            loader.style.display = 'inline-block';
+            
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "editGroupName",
+                    instructorName: currentUser.name,
+                    oldGroupName: oldGroupName,
+                    newGroupName: newGroupName
+                }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if (data.success) {
+                    alert("تم تعديل اسم المجموعة بنجاح!");
+                    fetchInstructorGroups(newGroupName);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
         function loadManageStudents() {
             const group = document.getElementById('manage-group-select').value;
             const tbody = document.getElementById('manage-students-tbody');
@@ -394,11 +464,122 @@
                 loader.style.display = 'none';
                 tbody.innerHTML = "";
                 if(data.success && data.data.length > 0) {
-                    data.data.forEach(student => {
-                        tbody.innerHTML += `<tr><td>${student}</td><td><button class="danger-btn" onclick="removeStudent('${student}')">حذف</button></td></tr>`;
+                    data.data.forEach((student, index) => {
+                        tbody.innerHTML += `
+                            <tr id="student-row-${index}">
+                                <td>${student}</td>
+                                <td>
+                                    <button class="action-btn" onclick="startEditStudent('${student}', ${index})" style="padding: 5px 10px; font-size: 13px; background-color: var(--primary-color); color: black; margin-left: 5px;">تعديل</button>
+                                    <button class="action-btn" onclick="startTransferStudent('${student}', ${index})" style="padding: 5px 10px; font-size: 13px; background-color: var(--warning); color: black; margin-left: 5px;">نقل</button>
+                                    <button class="danger-btn" onclick="removeStudent('${student}')" style="padding: 5px 10px; font-size: 13px;">حذف</button>
+                                </td>
+                            </tr>`;
                     });
                 } else {
                     tbody.innerHTML = '<tr><td colspan="2">لا يوجد طلاب في هذه المجموعة حالياً</td></tr>';
+                }
+            });
+        }
+
+        function startEditStudent(studentName, index) {
+            const row = document.getElementById(`student-row-${index}`);
+            row.innerHTML = `
+                <td><input type="text" id="edit-student-input-${index}" value="${studentName}" style="width: 90%; padding: 8px; background: var(--main-bg); color: white; border: 1px solid var(--primary-color); border-radius: 4px;"></td>
+                <td>
+                    <button class="action-btn" onclick="saveStudentName('${studentName}', ${index})" style="background-color: var(--success); color: white; padding: 5px 10px; margin-left: 5px; font-size: 13px;">حفظ</button>
+                    <button class="danger-btn" onclick="loadManageStudents()" style="padding: 5px 10px; font-size: 13px;">إلغاء</button>
+                </td>
+            `;
+        }
+
+        function saveStudentName(oldStudentName, index) {
+            const newStudentName = document.getElementById(`edit-student-input-${index}`).value.trim();
+            if (!newStudentName) return alert("يرجى إدخال اسم الطالب");
+            if (oldStudentName === newStudentName) return loadManageStudents();
+            
+            const group = document.getElementById('manage-group-select').value;
+            const loader = document.getElementById('manage-students-loader');
+            
+            loader.style.display = 'inline-block';
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "editStudentName",
+                    instructorName: currentUser.name,
+                    groupName: group,
+                    oldStudentName: oldStudentName,
+                    newStudentName: newStudentName
+                }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if (data.success) {
+                    alert("تم تعديل اسم الطالب بنجاح!");
+                    loadManageStudents();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function startTransferStudent(studentName, index) {
+            const currentGroup = document.getElementById('manage-group-select').value;
+            const selectOptions = document.getElementById('manage-group-select').options;
+            let optionsHtml = '';
+            for (let i = 0; i < selectOptions.length; i++) {
+                const val = selectOptions[i].value;
+                if (val && val !== currentGroup) {
+                    optionsHtml += `<option value="${val}">${selectOptions[i].text}</option>`;
+                }
+            }
+            
+            if (!optionsHtml) {
+                alert("لا توجد مجموعات أخرى للنقل إليها. يرجى إنشاء مجموعة أخرى أولاً.");
+                return;
+            }
+            
+            const row = document.getElementById(`student-row-${index}`);
+            row.innerHTML = `
+                <td>${studentName}</td>
+                <td>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <select id="transfer-group-select-${index}" style="width: auto; padding: 5px; background: var(--main-bg); color: white; border: 1px solid var(--warning); border-radius: 4px;">
+                            ${optionsHtml}
+                        </select>
+                        <button class="action-btn" onclick="saveTransferStudent('${studentName}', ${index})" style="background-color: var(--warning); color: black; padding: 5px 10px; font-size: 13px;">تأكيد</button>
+                        <button class="danger-btn" onclick="loadManageStudents()" style="padding: 5px 10px; font-size: 13px;">إلغاء</button>
+                    </div>
+                </td>
+            `;
+        }
+
+        function saveTransferStudent(studentName, index) {
+            const oldGroupName = document.getElementById('manage-group-select').value;
+            const newGroupName = document.getElementById(`transfer-group-select-${index}`).value;
+            if (!newGroupName) return;
+            
+            if (!confirm(`هل أنت متأكد من نقل الطالب (${studentName}) من مجموعة (${oldGroupName}) إلى مجموعة (${newGroupName})؟ سيتم نقل جميع تقييماته ودرجاته.`)) return;
+            
+            const loader = document.getElementById('manage-students-loader');
+            loader.style.display = 'inline-block';
+            
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "transferStudent",
+                    instructorName: currentUser.name,
+                    oldGroupName: oldGroupName,
+                    newGroupName: newGroupName,
+                    studentName: studentName
+                }),
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
+            }).then(res => res.json()).then(data => {
+                loader.style.display = 'none';
+                if (data.success) {
+                    alert("تم نقل الطالب بنجاح!");
+                    loadManageStudents();
+                } else {
+                    alert(data.message);
                 }
             });
         }
