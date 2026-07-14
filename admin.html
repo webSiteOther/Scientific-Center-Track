@@ -82,6 +82,7 @@
         <button class="tab-btn active" onclick="switchTab('monitoring')">المتابعة الشاملة</button>
         <button class="tab-btn" onclick="switchTab('reports')">استخراج التقارير</button>
         <button class="tab-btn" onclick="switchTab('analytics')">إحصائيات المركز</button>
+        <button class="tab-btn" onclick="switchTab('instructors-dashboard')">متابعة المدربين</button>
     </div>
 
     <div id="monitoring" class="tab-content active">
@@ -143,6 +144,19 @@
             <div class="form-group"><label>تصفية بالشهر:</label><select id="chart-filter-month" onchange="updateAllCharts()"><option value="all">الكل</option></select></div>
         </div>
         <div class="charts-grid"></div>
+    </div>
+
+    <div id="instructors-dashboard" class="tab-content">
+        <h3 style="color: var(--primary-color);">لوحة متابعة المدربين والمجموعات</h3>
+        <div class="form-row" style="background: var(--main-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div class="form-group">
+                <label>بحث باسم المدرب أو المجموعة:</label>
+                <input type="text" id="instructor-search-input" oninput="filterInstructorsDashboard()" placeholder="اكتب اسم المدرب أو المجموعة للبحث..." style="width: 100%; box-sizing: border-box;">
+            </div>
+        </div>
+        <div id="instructors-dashboard-container" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- سيتم توليد الكروت هنا ديناميكياً -->
+        </div>
     </div>
 
     <div style="display: none;">
@@ -244,6 +258,7 @@
             document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
             if(tabId === 'analytics') updateAllCharts();
+            else if(tabId === 'instructors-dashboard') renderInstructorsDashboard();
         }
 
         // ==========================================
@@ -794,6 +809,149 @@
             let config = { type: type, data: { labels: labels, datasets: datasets }, options: { responsive: true, plugins: { title: { display: true, text: chartConfigs.find(c=>c.id===id).title, color: '#fff', font: {size: 16} } } } };
             if(horizontal && type==='bar') config.options.indexAxis = 'y';
             chartsInstance[id] = new Chart(ctx, config);
+        }
+
+        function renderInstructorsDashboard() {
+            const container = document.getElementById('instructors-dashboard-container');
+            container.innerHTML = `<p style="color: var(--accent-blue);">جاري تحليل وتجميع البيانات...</p>`;
+            
+            if (!gData.users || gData.users.length === 0) {
+                container.innerHTML = `<p style="color: var(--danger);">لا توجد بيانات مستخدمين متاحة.</p>`;
+                return;
+            }
+            
+            // فلترة المستخدمين الذين لا يمثلون الإدارة (أي المدربين)
+            const instructors = gData.users.slice(1).filter(u => u[5] !== 'Admin' && u[0] !== 'مدير النظام' && u[0] !== 'admin');
+            
+            if (instructors.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted);">لا يوجد مدربون مسجلون حالياً.</p>`;
+                return;
+            }
+            
+            let html = '';
+            
+            instructors.forEach(inst => {
+                const instName = inst[0];
+                const instDept = inst[1];
+                
+                // جلب المجموعات التابعة لهذا المدرب
+                const instGroups = gData.groups.slice(1).filter(g => g[1] === instName);
+                
+                let groupsHtml = '';
+                if (instGroups.length === 0) {
+                    groupsHtml = `<p style="color: var(--text-muted); font-style: italic; padding: 10px;">لا توجد مجموعات مسجلة لهذا المدرب حالياً.</p>`;
+                } else {
+                    groupsHtml = `
+                        <table class="report-table" style="width: 100%; margin-top: 10px; background: var(--card-bg); text-align: center;">
+                            <thead>
+                                <tr style="background: var(--main-bg);">
+                                    <th style="color: var(--primary-color);">المجموعة</th>
+                                    <th style="color: var(--primary-color);">عدد الشهور المسجلة</th>
+                                    <th style="color: var(--primary-color);">تفصيل الشهور والسيشنات</th>
+                                    <th style="color: var(--primary-color);">آخر سيشن تم تسجيلها</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    instGroups.forEach(group => {
+                        const groupName = group[2];
+                        
+                        // جلب بيانات السيشنات لهذه المجموعة والمدرب
+                        const groupSessions = gData.sessions.slice(1).filter(s => s[1] === instName && s[2] === groupName);
+                        
+                        // تجميع الشهور المسجلة وتفاصيل كل شهر
+                        const monthsSet = new Set();
+                        const monthDetails = {};
+                        
+                        groupSessions.forEach(s => {
+                            const m = s[3];
+                            const sessNum = Number(s[4]);
+                            if (m) {
+                                monthsSet.add(m);
+                                if (!monthDetails[m]) {
+                                    monthDetails[m] = {
+                                        sessions: new Set(),
+                                        maxSession: 0
+                                    };
+                                }
+                                monthDetails[m].sessions.add(sessNum);
+                                if (sessNum > monthDetails[m].maxSession) {
+                                    monthDetails[m].maxSession = sessNum;
+                                }
+                            }
+                        });
+                        
+                        const monthsCount = monthsSet.size;
+                        
+                        let monthlyBreakdown = '';
+                        let latestMonth = '';
+                        let latestMaxSession = 0;
+                        
+                        if (monthsCount === 0) {
+                            monthlyBreakdown = '<span style="color: var(--text-muted);">لا توجد تقييمات مسجلة</span>';
+                        } else {
+                            const breakdownParts = [];
+                            Object.keys(monthDetails).forEach(m => {
+                                const detail = monthDetails[m];
+                                const totalSessInMonth = detail.sessions.size;
+                                breakdownParts.push(`<strong style="color: var(--accent-blue);">${m}</strong>: (${totalSessInMonth} سيشنات، أقصى سيشن تم الوصول إليها: ${detail.maxSession})`);
+                                
+                                latestMonth = m;
+                                latestMaxSession = detail.maxSession;
+                            });
+                            monthlyBreakdown = breakdownParts.join('<br>');
+                        }
+                        
+                        let latestStatus = '-';
+                        if (latestMonth) {
+                            latestStatus = `<span style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${latestMonth} - سيشن ${latestMaxSession}</span>`;
+                        }
+                        
+                        groupsHtml += `
+                            <tr>
+                                <td style="font-weight: bold; color: white;">${groupName}</td>
+                                <td><span style="font-size: 16px; font-weight: bold; color: var(--primary-color);">${monthsCount}</span> شهور</td>
+                                <td style="text-align: right; padding: 10px; font-size: 13px; line-height: 1.6;">${monthlyBreakdown}</td>
+                                <td>${latestStatus}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    groupsHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                html += `
+                    <div class="instructor-dashboard-card" data-inst-name="${instName.toLowerCase()}" data-groups="${instGroups.map(g => g[2].toLowerCase()).join(' ')}" style="background: var(--card-bg); border: 1px solid #2c3e50; border-radius: 10px; padding: 20px; border-top: 4px solid var(--primary-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2c3e50; padding-bottom: 10px; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: var(--primary-color); font-size: 18px;">الكابتن: ${instName}</h4>
+                            <span style="background: rgba(0, 212, 255, 0.1); color: var(--accent-blue); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold;">قسم: ${instDept || 'غير محدد'}</span>
+                        </div>
+                        ${groupsHtml}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function filterInstructorsDashboard() {
+            const query = document.getElementById('instructor-search-input').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.instructor-dashboard-card');
+            
+            cards.forEach(card => {
+                const instName = card.getAttribute('data-inst-name');
+                const groups = card.getAttribute('data-groups');
+                
+                if (instName.includes(query) || groups.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
